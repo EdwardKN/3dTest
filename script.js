@@ -1,6 +1,7 @@
 var map = undefined;
 const MAPSIZE = 16;
 const CUBESIZE = 20;
+const MAXDOF = 8;
 
 var player = undefined;
 
@@ -39,14 +40,23 @@ class Map{
     }
     draw(){
         this.drawRay();
-
-        /*
+        //this.drawMapEditor();
+    }
+    drawMapEditor(){
         for(let x = 0; x < MAPSIZE; x++){
             for(let y = 0; y < MAPSIZE; y++){
                 c.fillStyle = this.map[x*MAPSIZE + y] ? "black" : "white";
+                if(detectCollision(x*CUBESIZE+1,y*CUBESIZE+1,CUBESIZE-2,CUBESIZE-2,mouse.x,mouse.y,1,1)){
+                    c.fillStyle = "gray"
+                    if(mouse.down){
+                        mouse.down = false;
+                        this.map[x*MAPSIZE + y]++;
+                        this.map[x*MAPSIZE + y]%=2;
+                    }
+                }
                 c.fillRect(x*CUBESIZE+1,y*CUBESIZE+1,CUBESIZE-2,CUBESIZE-2)
             }
-        }*/
+        }
     }
     drawRay(){
         let fov = 30*toRad;
@@ -61,35 +71,51 @@ class Map{
 
             ray.distance *= Math.cos(player.angle-newAngle)
             let lineHeight = Math.floor((canvas.height*64/ray.distance))
-            let lineOffset = canvas.height/2 - lineHeight/2
-            let texX,texY;
+            let lineOffset = canvas.height/2 - lineHeight/2 //+player.pitch*5
+            let texX,texY;  
             if(ray.side == 0){
-                texX = Math.floor(ray.x)%images.seperate.brick.w;
+                texX =  Math.abs(Math.floor(ray.x*(images.seperate.brick.w/CUBESIZE)+1))%images.seperate.brick.w;
                 if(newAngle > Math.PI) texX = images.seperate.brick.w - texX;
             }else{
-                texX = Math.floor(ray.y)%images.seperate.brick.w;
+                texX = Math.abs( Math.floor(ray.y*(images.seperate.brick.w/CUBESIZE)+1))%images.seperate.brick.w;
                 if(newAngle < Math.PI/2 || newAngle > Math.PI*3/2) texX = images.seperate.brick.w - texX;
             }
             for(let y = 0; y < images.seperate.brick.h; y++){
-                c.fillStyle = getImageDataFromSpriteSheet(images.seperate.brick,texX,y)
-                c.fillRect(Math.floor(lineX),Math.floor(lineOffset+y*(lineHeight/images.seperate.brick.h)),Math.floor(lineWidth),Math.ceil(lineHeight/images.seperate.brick.h))
+                let col = getImageDataFromSpriteSheet(images.seperate.brick,texX,y,false)
+                let fog = -((ray.distance-MAXDOF*CUBESIZE + 20)*5).clamp(0,255)
+                c.fillStyle = rgb(col[0]+fog,col[1]+fog,col[2]+fog);
+                c.fillRect(Math.floor(lineX),Math.floor(lineOffset+y*(lineHeight/images.seperate.brick.h)+player.pitch),Math.floor(lineWidth),Math.ceil(lineHeight/images.seperate.brick.h))
             }
-            for(let y = Math.floor(lineOffset+lineHeight);y<canvas.height;y++){
-                let dy = y-canvas.height/2
+            for(let y = Math.floor(lineOffset+lineHeight+player.pitch);y<canvas.height;y++){
+                let dy = y-canvas.height/2-player.pitch
                 let raFix = Math.cos(fixAngle(player.angle-newAngle));
-                texX = Math.abs(Math.floor(player.x +Math.cos(newAngle)*256*64/dy/raFix)%32);
-                texY = Math.abs(Math.floor(player.y +Math.sin(newAngle)*256*64/dy/raFix)%32);
+                let tmpX = Math.cos(newAngle)*256*64*(images.seperate.brick.w/CUBESIZE)/dy/raFix;
+                let tmpY = Math.sin(newAngle)*256*64*(images.seperate.brick.w/CUBESIZE)/dy/raFix;
+                texX = Math.abs(Math.floor(player.x*(images.seperate.brick.w/CUBESIZE) +tmpX)%32);
+                texY = Math.abs(Math.floor(player.y*(images.seperate.brick.w/CUBESIZE) +tmpY)%32);
 
-                c.fillStyle = getImageDataFromSpriteSheet(images.seperate.brick,texX,texY)
+                let col = getImageDataFromSpriteSheet(images.seperate.brick,texX,texY,false)
+                let fog = -((tmpY-MAXDOF*CUBESIZE)*2.5).clamp(0,255) -((tmpX-MAXDOF*CUBESIZE)*2.5).clamp(0,255)
+                c.fillStyle = rgb(col[0]+fog,col[1]+fog,col[2]+fog);
                 c.fillRect(Math.floor(lineX),y,Math.floor(lineWidth),1)
+            }
+            for(let y = 0;y<lineOffset+player.pitch;y++){
 
+                let dy = y-canvas.height/2-player.pitch
+                let raFix = Math.cos(fixAngle(player.angle-newAngle));
+                let tmpX = Math.cos(newAngle)*256*64*(images.seperate.brick.w/CUBESIZE)/dy/raFix;
+                let tmpY = Math.sin(newAngle)*256*64*(images.seperate.brick.w/CUBESIZE)/dy/raFix;
+                let texX = Math.abs(Math.floor(-player.x*(images.seperate.brick.w/CUBESIZE) +tmpX)%32);
+                let texY = Math.abs(Math.floor(-player.y*(images.seperate.brick.w/CUBESIZE) +tmpY)%32);
 
-                c.fillStyle = getImageDataFromSpriteSheet(images.seperate.brick,texX,texY)
-                c.fillRect(Math.floor(lineX),canvas.height-y,Math.floor(lineWidth),1)
+                let col = getImageDataFromSpriteSheet(images.seperate.brick,texX,texY,false)
+                let fog = -((tmpY-MAXDOF*CUBESIZE)*2.5).clamp(0,255) -((tmpX-MAXDOF*CUBESIZE)*2.5).clamp(0,255)
+                c.fillStyle = rgb(col[0]+fog,col[1]+fog,col[2]+fog);
+                c.fillRect(Math.floor(lineX),y,Math.floor(lineWidth),1)
             }
             //c.drawLine({from:player,to:{x:ray.x,y:ray.y,color:"black"},lineWidth:2})
         }
-    }
+    } 
 }
 
 class Player{
@@ -97,17 +123,18 @@ class Player{
         this.x = x;
         this.y = y;
         this.angle = 0.001;
-        this.deltaX = 0;
+        this.deltaX = 1;
         this.deltaY = 0;
+        this.pitch = 0;
     }
     update(){
-        if(pressedKeys['KeyA']){
+        if(pressedKeys['ArrowLeft']){
             this.angle-=0.02*deltaTime;
             if(this.angle< 0){this.angle+= 2*Math.PI}
             this.deltaX = Math.cos(this.angle);
             this.deltaY = Math.sin(this.angle);
         }
-        if(pressedKeys['KeyD']){
+        if(pressedKeys['ArrowRight']){
             this.angle+=0.02*deltaTime;
             if(this.angle> 2*Math.PI){this.angle-= 2*Math.PI}
             this.deltaX = Math.cos(this.angle);
@@ -120,6 +147,14 @@ class Player{
         if(pressedKeys['KeyS']){
             this.x -= this.deltaX*deltaTime;
             this.y -= this.deltaY*deltaTime;
+        }
+        if(pressedKeys['ArrowUp']){
+            this.pitch += 15*deltaTime;
+            this.pitch = this.pitch.clamp(-250,250)
+        }
+        if(pressedKeys['ArrowDown']){
+            this.pitch -= 15*deltaTime;
+            this.pitch = this.pitch.clamp(-250,250)
         }
         this.draw();
     }
@@ -141,7 +176,7 @@ class Player{
         }
     }
     getHorizontalRay(angle){
-        let aTan, rayX, rayY, rayOffseyX,rayOffseyY,dof = 0,mapX,mapY, mapIndex;
+        let aTan, rayX, rayY, rayOffseyX,rayOffseyY,dof = 0,mapX,mapY, mapIndex, maxed;
         for(let rayIndex = 0; rayIndex<1; rayIndex++){
             aTan = -1 /Math.tan(angle)
             if(angle>Math.PI){
@@ -159,23 +194,23 @@ class Player{
             if(angle == 0 || angle == Math.PI){
                 rayX = this.x;
                 rayY = this.y;
-                dof = 16;
+                dof = MAXDOF;
             }
-            while(dof<16){
+            while(dof<MAXDOF && !maxed){
                 mapX = Math.floor(rayX/CUBESIZE)
                 mapY = Math.floor(rayY/CUBESIZE)
                 mapIndex = mapX+mapY*MAPSIZE;
-                if(mapIndex >= 0 && mapIndex < Math.pow(MAPSIZE,2) && map.map[mapIndex] > 0){dof = 16}else{
+                if(mapIndex >= 0 && mapIndex < Math.pow(MAPSIZE,2) && map.map[mapIndex] > 0){maxed = true}else{
                     rayX+=rayOffseyX;
                     rayY+=rayOffseyY;
                     dof++;
                 };
             }
-            return {x:rayX,y:rayY,side:0,tex:map.map[mapIndex]}
+            return {x:rayX,y:rayY,side:0,tex:map.map[mapIndex],dof:dof}
         }
     }
     getVerticalRay(angle){
-        let nTan, rayX, rayY, rayOffseyX,rayOffseyY,dof = 0,mapX,mapY,mapIndex;
+        let nTan, rayX, rayY, rayOffseyX,rayOffseyY,dof = 0,mapX,mapY,mapIndex,maxed;
         for(let rayIndex = 0; rayIndex<1; rayIndex++){
             nTan = -Math.tan(angle)
             if(angle>Math.PI / 2 && angle<Math.PI*3 / 2){
@@ -193,19 +228,19 @@ class Player{
             if(angle == Math.PI / 2 || angle == Math.PI*3 / 2){
                 rayX = this.x;
                 rayY = this.y;
-                dof = 16;
+                dof = MAXDOF;
             }
-            while(dof<16){
+            while(dof<MAXDOF && !maxed){
                 mapX = Math.floor(rayX/CUBESIZE)
                 mapY = Math.floor(rayY/CUBESIZE)
                 mapIndex = mapX+mapY*MAPSIZE;
-                if(mapIndex >= 0 && mapIndex < Math.pow(MAPSIZE,2) && map.map[mapIndex] > 0){dof = 16}else{
+                if(mapIndex >= 0 && mapIndex < Math.pow(MAPSIZE,2) && map.map[mapIndex] > 0){maxed = true}else{
                     rayX+=rayOffseyX;
                     rayY+=rayOffseyY;
                     dof++;
                 };
             }
-            return {x:rayX,y:rayY,side:1,tex:map.map[mapIndex]}
+            return {x:rayX,y:rayY,side:1,tex:map.map[mapIndex],dof:dof}
         }   
     }
 }

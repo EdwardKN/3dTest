@@ -269,6 +269,7 @@ class Button {
 
 var spritesheet;
 var spritesheetImage;
+var spriteSheetWidth = 0;
 var images = {};
 
 //var f = new FontFace('verdanai', 'url(./verdanai.ttf)');
@@ -303,6 +304,7 @@ async function loadSpriteSheet() {
     spritesheet = await response.json();
     spritesheetImage = new Image();
     spritesheetImage.src = "./images/texture.png";
+    spriteSheetWidth = spritesheetImage.width;
     spritesheetImage.onload = getImageData;
     
 }
@@ -366,9 +368,9 @@ class Sounds {
     }
 }
 
-function getImageDataFromSpriteSheet(frame,x,y) {
-    let start = (frame.x + x + (frame.y+y)*spritesheetImage.width)*4
-    return rgb(images.imageData[start],images.imageData[start+1],images.imageData[start+2]);
+function getImageDataFromSpriteSheet(frame,x,y,toRGB = true) {
+    let start = (frame.x + x + (frame.y+y)*spriteSheetWidth)*4
+    return !toRGB ? [images.imageData[start],images.imageData[start+1],images.imageData[start+2]] : rgb(images.imageData[start],images.imageData[start+1],images.imageData[start+2]);
 }
 
 CanvasRenderingContext2D.prototype.drawImageFromSpriteSheet = function (frame, settingsOverride) {
@@ -982,7 +984,7 @@ function riggedShuffle(unshuffled, values) {
         .map(({ value }) => value)
 }
 function rgb(r,g,b){
-    return 'rgb('+r+', '+g+', '+b+')'
+    return 'rgb('+r.clamp(0,255)+', '+g.clamp(0,255)+', '+b.clamp(0,255)+')'
 }
 
 function fixAngle(angle){
