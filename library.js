@@ -984,7 +984,7 @@ function riggedShuffle(unshuffled, values) {
         .map(({ value }) => value)
 }
 function rgb(r,g,b){
-    return 'rgb('+r.clamp(0,255)+', '+g.clamp(0,255)+', '+b.clamp(0,255)+')'
+    return 'rgb('+r+', '+g+', '+b+')'
 }
 
 function fixAngle(angle){
