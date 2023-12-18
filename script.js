@@ -5,8 +5,8 @@ const MAPSIZE = 16;
 const CUBESIZE = 32;
 
 //VISUAL
-const FOGSTARTMODIFIER = 50;
-const FOGINTENSITY = 10;
+const FOGSTARTMODIFIER = 100;
+const FOGINTENSITY = 2;
 const HEIGHTTOWIDTH = 48;
 const FOV = 60 * toRad;
 const TEXTURESIZE = 32;
@@ -63,12 +63,12 @@ class Map {
     drawMapEditor() {
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
-                c.fillStyle = this.floor[x + y * MAPSIZE] == Object.values(images.textures)[0] ? "black" : "white";
+                c.fillStyle = this.wall[x + y * MAPSIZE] == Object.values(images.textures)[0] ? "black" : "white";
                 if (detectCollision(x * CUBESIZE + 1, y * CUBESIZE + 1, CUBESIZE - 2, CUBESIZE - 2, mouse.x, mouse.y, 1, 1)) {
                     c.fillStyle = "gray"
                     if (mouse.down) {
                         mouse.down = false;
-                        this.floor[x + y * MAPSIZE] = this.floor[x + y * MAPSIZE] == Object.values(images.textures)[0] ? Object.values(images.textures)[1] : Object.values(images.textures)[0]
+                        this.wall[x + y * MAPSIZE] = this.wall[x + y * MAPSIZE] == 0 ? Object.values(images.textures)[0] : 0;
                     }
                 }
                 c.fillRect(x * CUBESIZE + 1, y * CUBESIZE + 1, CUBESIZE - 2, CUBESIZE - 2)
@@ -85,8 +85,9 @@ class Map {
 
             let lineWidth = canvas.width / RAYAMOUNT;
             let lineX = index * lineWidth;
-
+            ray.distance = Math.min(ray.distance,MAXDOF*CUBESIZE)
             ray.distance *= Math.cos(player.angle - newAngle)
+
             let lineHeight = Math.floor((canvas.height * HEIGHTTOWIDTH / ray.distance))
             let lineOffset = canvas.height / 2 - lineHeight / 2;
             let texX;
