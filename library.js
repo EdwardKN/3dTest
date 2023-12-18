@@ -306,7 +306,7 @@ async function loadSpriteSheet() {
     spritesheetImage.src = "./images/texture.png";
     spriteSheetWidth = spritesheetImage.width;
     spritesheetImage.onload = getImageData;
-    
+
 }
 async function loadImages() {
     spritesheet.frames.forEach((frame, i) => {
@@ -321,13 +321,13 @@ async function loadData() {
     await loadImages();
 }
 
-async function getImageData(){
+async function getImageData() {
     let canv = document.createElement('canvas')
     let context = canv.getContext('2d');
     canv.width = spritesheetImage.width;
     canv.height = spritesheetImage.height;
-    context.drawImage(spritesheetImage,0,0);
-    images.imageData = context.getImageData(0,0,canv.width,canv.height).data
+    context.drawImage(spritesheetImage, 0, 0);
+    images.imageData = context.getImageData(0, 0, canv.width, canv.height).data
 }
 class Sounds {
     constructor(filePath, sounds) {
@@ -368,9 +368,9 @@ class Sounds {
     }
 }
 
-function getImageDataFromSpriteSheet(frame,x,y,toRGB = true) {
-    let start = (frame.x + x + (frame.y+y)*spriteSheetWidth)*4
-    return !toRGB ? [images.imageData[start],images.imageData[start+1],images.imageData[start+2]] : rgb(images.imageData[start],images.imageData[start+1],images.imageData[start+2]);
+function getImageDataFromSpriteSheet(frame, x, y, toRGB = true) {
+    let start = (frame.x + x + (frame.y + y) * spriteSheetWidth) * 4
+    return !toRGB ? [images.imageData[start], images.imageData[start + 1], images.imageData[start + 2]] : rgb(images.imageData[start], images.imageData[start + 1], images.imageData[start + 2]);
 }
 
 CanvasRenderingContext2D.prototype.drawImageFromSpriteSheet = function (frame, settingsOverride) {
@@ -466,12 +466,12 @@ CanvasRenderingContext2D.prototype.drawIsometricImage = function (frame, setting
     this.drawRotatedImageFromSpriteSheet(frame, { x: to_screen_coordinate(settings.x, settings.y).x + settings.offsetX, y: to_screen_coordinate(settings.x, settings.y).y + settings.offsetY, w: settings.w, h: settings.h, rotation: settings.rotation, mirrored: settings.mirrored, cropX: settings.cropX, cropY: settings.cropY, cropW: settings.cropW, cropH: settings.cropH })
 }
 
-CanvasRenderingContext2D.prototype.drawLine = function(settingsOverride){
+CanvasRenderingContext2D.prototype.drawLine = function (settingsOverride) {
     let settings = {
-        from:{x:0,y:0},
-        to:{x:0,y:0},
-        lineWidth:1,
-        color:"black"
+        from: { x: 0, y: 0 },
+        to: { x: 0, y: 0 },
+        lineWidth: 1,
+        color: "black"
     };
     if (settingsOverride) {
         let tmp = Object.entries(settingsOverride);
@@ -483,8 +483,8 @@ CanvasRenderingContext2D.prototype.drawLine = function(settingsOverride){
     }
     this.lineWidth = settings.lineWidth;
     this.beginPath();
-    this.moveTo(settings.from.x,settings.from.y);
-    this.lineTo(settings.to.x,settings.to.y);
+    this.moveTo(settings.from.x, settings.from.y);
+    this.lineTo(settings.to.x, settings.to.y);
     this.strokeStyle = settings.color
     this.stroke();
 }
@@ -983,10 +983,10 @@ function riggedShuffle(unshuffled, values) {
         .sort((a, b) => a.sort - b.sort)
         .map(({ value }) => value)
 }
-function rgb(r,g,b){
-    return 'rgb('+r+', '+g+', '+b+')'
+function rgb(r, g, b) {
+    return 'rgb(' + r + ', ' + g + ', ' + b + ')'
 }
 
-function fixAngle(angle){
-    return (angle > Math.PI*2 ? angle - Math.PI*2 : (angle < 0 ? angle + Math.PI*2 : angle))
+function fixAngle(angle) {
+    return (angle > Math.PI * 2 ? angle - Math.PI * 2 : (angle < 0 ? angle + Math.PI * 2 : angle))
 }
