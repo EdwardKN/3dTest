@@ -1,7 +1,19 @@
 var map = undefined;
+
+//MAP
 const MAPSIZE = 16;
 const CUBESIZE = 32;
-const MAXDOF = 8;
+
+//VISUAL
+const FOGSTARTMODIFIER = 50;
+const FOGINTENSITY = 10;
+const HEIGHTTOWIDTH = 48;
+const FOV = 60 * toRad;
+
+// Graphics intensive
+const MAXDOF = 4;
+const RAYAMOUNT = 80;
+const SIDERES = 4;
 
 var player = undefined;
 
@@ -42,18 +54,17 @@ class Map {
     }
     draw() {
         this.drawRay();
-        //this.drawMapEditor();
     }
     drawMapEditor() {
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
-                c.fillStyle = this.map[x * MAPSIZE + y] ? "black" : "white";
+                c.fillStyle = this.map[x + y * MAPSIZE] ? "black" : "white";
                 if (detectCollision(x * CUBESIZE + 1, y * CUBESIZE + 1, CUBESIZE - 2, CUBESIZE - 2, mouse.x, mouse.y, 1, 1)) {
                     c.fillStyle = "gray"
                     if (mouse.down) {
                         mouse.down = false;
-                        this.map[x * MAPSIZE + y]++;
-                        this.map[x * MAPSIZE + y] %= 2;
+                        this.map[x + y * MAPSIZE]++;
+                        this.map[x + y * MAPSIZE] %= 2;
                     }
                 }
                 c.fillRect(x * CUBESIZE + 1, y * CUBESIZE + 1, CUBESIZE - 2, CUBESIZE - 2)
@@ -61,19 +72,19 @@ class Map {
         }
     }
     drawRay() {
-        let fov = 60 * toRad;
-        let amount = 120;
-        for (let index = 0; index <= amount; index++) {
-            let angle = (player.angle - fov / 2) + index * fov / amount;
+        let rays = [];
+        for (let index = 0; index <= RAYAMOUNT; index++) {
+            let angle = (player.angle - FOV / 2) + index * FOV / RAYAMOUNT;
             let newAngle = (angle > Math.PI * 2 ? angle - Math.PI * 2 : (angle < 0 ? angle + Math.PI * 2 : angle))
             let ray = player.getRay(newAngle);
+            rays.push(ray)
 
-            let lineWidth = canvas.width / amount;
+            let lineWidth = canvas.width / RAYAMOUNT;
             let lineX = index * lineWidth;
 
             ray.distance *= Math.cos(player.angle - newAngle)
-            let lineHeight = Math.floor((canvas.height * 64 / ray.distance))
-            let lineOffset = canvas.height / 2 - lineHeight / 2 //+player.pitch*5
+            let lineHeight = Math.floor((canvas.height * HEIGHTTOWIDTH / ray.distance))
+            let lineOffset = canvas.height / 2 - lineHeight / 2;
             let texX, texY;
             if (ray.side == 0) {
                 texX = Math.abs(Math.floor(ray.x * (images.seperate.brick.w / CUBESIZE) + 1)) % images.seperate.brick.w;
@@ -84,39 +95,44 @@ class Map {
             }
             for (let y = 0; y < images.seperate.brick.h; y++) {
                 let col = getImageDataFromSpriteSheet(images.seperate.brick, texX, y, false)
-                let fog = -((ray.distance - MAXDOF * CUBESIZE + 50) * 10).clamp(0, 255)
+                let fog = -((ray.distance - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY).clamp(0, 255)
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
                 c.fillRect(Math.floor(lineX), Math.floor(lineOffset + y * (lineHeight / images.seperate.brick.h) + player.pitch), Math.floor(lineWidth), Math.ceil(lineHeight / images.seperate.brick.h))
             }
-            for (let y = Math.floor(lineOffset + lineHeight + player.pitch); y < canvas.height; y++) {
+            for (let y = Math.floor(lineOffset + lineHeight + player.pitch); y < canvas.height; y += SIDERES) {
                 let dy = y - canvas.height / 2 - player.pitch
                 let raFix = Math.cos(fixAngle(player.angle - newAngle));
-                let tmpX = Math.cos(newAngle) * 256 * 64 * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
-                let tmpY = Math.sin(newAngle) * 256 * 64 * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
+                let tmpX = Math.cos(newAngle) * 256 * HEIGHTTOWIDTH * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
+                let tmpY = Math.sin(newAngle) * 256 * HEIGHTTOWIDTH * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
                 let texX = Math.abs(Math.floor(player.x * (images.seperate.brick.w / CUBESIZE) + tmpX) % 32);
                 let texY = Math.abs(Math.floor(player.y * (images.seperate.brick.w / CUBESIZE) + tmpY) % 32);
 
                 let col = getImageDataFromSpriteSheet(images.seperate.brick, texX, texY, false)
-                let fog = -Math.max(((Math.abs(tmpX) - MAXDOF * CUBESIZE + 50) * 100).clamp(0, 255), ((Math.abs(tmpY) - MAXDOF * CUBESIZE + 50) * 100)).clamp(0, 255)
+                let fog = Math.floor(-Math.max(((Math.abs(tmpX) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY).clamp(0, 255), ((Math.abs(tmpY) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY)).clamp(0, 255))
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
-                c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), 1)
+                c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), SIDERES)
             }
-            for (let y = 0; y < lineOffset + player.pitch; y++) {
+            for (let y = 0; y < lineOffset + player.pitch; y += SIDERES) {
 
                 let dy = y - canvas.height / 2 - player.pitch
                 let raFix = Math.cos(fixAngle(player.angle - newAngle));
-                let tmpX = Math.cos(newAngle) * 256 * 64 * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
-                let tmpY = Math.sin(newAngle) * 256 * 64 * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
+                let tmpX = Math.cos(newAngle) * 256 * HEIGHTTOWIDTH * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
+                let tmpY = Math.sin(newAngle) * 256 * HEIGHTTOWIDTH * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
                 let texX = Math.abs(Math.floor(-player.x * (images.seperate.brick.w / CUBESIZE) + tmpX) % 32);
                 let texY = Math.abs(Math.floor(-player.y * (images.seperate.brick.w / CUBESIZE) + tmpY) % 32);
 
                 let col = getImageDataFromSpriteSheet(images.seperate.brick, texX, texY, false)
-                let fog = -Math.max(((Math.abs(tmpX) - MAXDOF * CUBESIZE + 50) * 100).clamp(0, 255), ((Math.abs(tmpY) - MAXDOF * CUBESIZE + 50) * 100)).clamp(0, 255)
+                let fog = -Math.max(((Math.abs(tmpX) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY).clamp(0, 255), ((Math.abs(tmpY) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY)).clamp(0, 255)
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
-                c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), 1);
+                c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), SIDERES);
             }
-            //c.drawLine({from:player,to:{x:ray.x,y:ray.y,color:"black"},lineWidth:2})
         }
+        /*Mapeditor
+        
+        this.drawMapEditor()
+        rays.forEach(ray => {
+            c.drawLine({ from: player, to: { x: ray.x, y: ray.y, color: "black" }, lineWidth: 2 })
+        })*/
     }
 }
 
@@ -127,6 +143,8 @@ class Player {
         this.angle = 0.001;
         this.deltaX = 1;
         this.deltaY = 0;
+        this.deltaA = 0;
+        this.deltaB = -1;
         this.pitch = 0;
     }
     update() {
@@ -135,6 +153,8 @@ class Player {
             if (this.angle < 0) { this.angle += 2 * Math.PI }
             this.deltaX = Math.cos(this.angle);
             this.deltaY = Math.sin(this.angle);
+            this.deltaA = Math.cos(fixAngle(this.angle - Math.PI / 2));
+            this.deltaB = Math.sin(fixAngle(this.angle - Math.PI / 2));
         }
         if (pressedKeys['ArrowRight']) {
             this.angle += 0.02 * deltaTime;
@@ -150,6 +170,14 @@ class Player {
             this.x -= this.deltaX * deltaTime;
             this.y -= this.deltaY * deltaTime;
         }
+        if (pressedKeys['KeyD']) {
+            this.x -= this.deltaA * deltaTime;
+            this.y -= this.deltaB * deltaTime;
+        }
+        if (pressedKeys['KeyA']) {
+            this.x += this.deltaA * deltaTime;
+            this.y += this.deltaB * deltaTime;
+        }
         if (pressedKeys['ArrowUp']) {
             this.pitch += 15 * deltaTime;
             this.pitch = this.pitch.clamp(-250, 250)
@@ -161,8 +189,8 @@ class Player {
         this.draw();
     }
     draw() {
-        //c.fillRect(this.x-2,this.y-2,4,4)
-        //c.drawLine({from:this,to:{x:this.x+this.deltaX*20,y:this.y+this.deltaY*20}})
+        c.fillRect(this.x - 2, this.y - 2, 4, 4)
+        c.drawLine({ from: this, to: { x: this.x + this.deltaX * 20, y: this.y + this.deltaY * 20 } })
     }
     getRay(angle) {
         let horizontalRay = this.getHorizontalRay(angle);
