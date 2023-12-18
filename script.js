@@ -169,20 +169,28 @@ class Player {
             this.deltaY = Math.sin(this.angle);
         }
         if (pressedKeys['KeyW']) {
-            this.x += this.deltaX * deltaTime;
-            this.y += this.deltaY * deltaTime;
+            if (!map.wall[Math.floor((this.x + this.deltaX * deltaTime) / CUBESIZE) + Math.floor((this.y + this.deltaY * deltaTime) / CUBESIZE) * MAPSIZE]) {
+                this.x += this.deltaX * deltaTime;
+                this.y += this.deltaY * deltaTime;
+            }
         }
         if (pressedKeys['KeyS']) {
-            this.x -= this.deltaX * deltaTime;
-            this.y -= this.deltaY * deltaTime;
+            if (!map.wall[Math.floor((this.x - this.deltaX * deltaTime) / CUBESIZE) + Math.floor((this.y - this.deltaY * deltaTime) / CUBESIZE) * MAPSIZE]) {
+                this.x -= this.deltaX * deltaTime;
+                this.y -= this.deltaY * deltaTime;
+            }
         }
         if (pressedKeys['KeyD']) {
-            this.x -= this.deltaA * deltaTime;
-            this.y -= this.deltaB * deltaTime;
+            if (!map.wall[Math.floor((this.x - this.deltaA * deltaTime) / CUBESIZE) + Math.floor((this.y - this.deltaB * deltaTime) / CUBESIZE) * MAPSIZE]) {
+                this.x -= this.deltaA * deltaTime;
+                this.y -= this.deltaB * deltaTime;
+            }
         }
         if (pressedKeys['KeyA']) {
-            this.x += this.deltaA * deltaTime;
-            this.y += this.deltaB * deltaTime;
+            if (!map.wall[Math.floor((this.x + this.deltaA * deltaTime) / CUBESIZE) + Math.floor((this.y + this.deltaB * deltaTime) / CUBESIZE) * MAPSIZE]) {
+                this.x += this.deltaA * deltaTime;
+                this.y += this.deltaB * deltaTime;
+            }
         }
         if (pressedKeys['ArrowUp']) {
             this.pitch += 15 * deltaTime;
