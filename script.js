@@ -9,6 +9,7 @@ const FOGSTARTMODIFIER = 50;
 const FOGINTENSITY = 10;
 const HEIGHTTOWIDTH = 48;
 const FOV = 60 * toRad;
+const TEXTURESIZE = 32;
 
 // Graphics intensive
 const MAXDOF = 4;
@@ -42,13 +43,17 @@ function update() {
 }
 class Map {
     constructor() {
-        this.map = [];
+        this.roof = [];
+        this.wall = [];
+        this.floor = [];
         this.init()
     }
     init() {
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
-                this.map.push((x == 0 || y == 0 || x == MAPSIZE - 1 || y == MAPSIZE - 1) ? 1 : 0)
+                this.roof.push(Object.values(images.textures)[0])
+                this.wall.push((x == 0 || y == 0 || x == MAPSIZE - 1 || y == MAPSIZE - 1) ? Object.values(images.textures)[0] : 0)
+                this.floor.push(Object.values(images.textures)[1])
             }
         }
     }
@@ -58,13 +63,12 @@ class Map {
     drawMapEditor() {
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
-                c.fillStyle = this.map[x + y * MAPSIZE] ? "black" : "white";
+                c.fillStyle = this.floor[x + y * MAPSIZE] == Object.values(images.textures)[0] ? "black" : "white";
                 if (detectCollision(x * CUBESIZE + 1, y * CUBESIZE + 1, CUBESIZE - 2, CUBESIZE - 2, mouse.x, mouse.y, 1, 1)) {
                     c.fillStyle = "gray"
                     if (mouse.down) {
                         mouse.down = false;
-                        this.map[x + y * MAPSIZE]++;
-                        this.map[x + y * MAPSIZE] %= 2;
+                        this.floor[x + y * MAPSIZE] = this.floor[x + y * MAPSIZE] == Object.values(images.textures)[0] ? Object.values(images.textures)[1] : Object.values(images.textures)[0]
                     }
                 }
                 c.fillRect(x * CUBESIZE + 1, y * CUBESIZE + 1, CUBESIZE - 2, CUBESIZE - 2)
@@ -85,29 +89,30 @@ class Map {
             ray.distance *= Math.cos(player.angle - newAngle)
             let lineHeight = Math.floor((canvas.height * HEIGHTTOWIDTH / ray.distance))
             let lineOffset = canvas.height / 2 - lineHeight / 2;
-            let texX, texY;
+            let texX;
             if (ray.side == 0) {
-                texX = Math.abs(Math.floor(ray.x * (images.seperate.brick.w / CUBESIZE) + 1)) % images.seperate.brick.w;
-                if (newAngle > Math.PI) texX = images.seperate.brick.w - texX;
+                texX = Math.abs(Math.floor(ray.x * (TEXTURESIZE / CUBESIZE) + 1)) % TEXTURESIZE;
+                if (newAngle > Math.PI) texX = TEXTURESIZE - texX;
             } else {
-                texX = Math.abs(Math.floor(ray.y * (images.seperate.brick.w / CUBESIZE) + 1)) % images.seperate.brick.w;
-                if (newAngle < Math.PI / 2 || newAngle > Math.PI * 3 / 2) texX = images.seperate.brick.w - texX;
+                texX = Math.abs(Math.floor(ray.y * (TEXTURESIZE / CUBESIZE) + 1)) % TEXTURESIZE;
+                if (newAngle < Math.PI / 2 || newAngle > Math.PI * 3 / 2) texX = TEXTURESIZE - texX;
             }
-            for (let y = 0; y < images.seperate.brick.h; y++) {
-                let col = getImageDataFromSpriteSheet(images.seperate.brick, texX, y, false)
+            for (let y = 0; y < TEXTURESIZE; y++) {
+                let col = getImageDataFromSpriteSheet(ray.tex, texX, y, false)
                 let fog = -((ray.distance - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY).clamp(0, 255)
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
-                c.fillRect(Math.floor(lineX), Math.floor(lineOffset + y * (lineHeight / images.seperate.brick.h) + player.pitch), Math.floor(lineWidth), Math.ceil(lineHeight / images.seperate.brick.h))
+                c.fillRect(Math.floor(lineX), Math.floor(lineOffset + y * (lineHeight / TEXTURESIZE) + player.pitch), Math.floor(lineWidth), Math.ceil(lineHeight / TEXTURESIZE))
             }
             for (let y = Math.floor(lineOffset + lineHeight + player.pitch); y < canvas.height; y += SIDERES) {
                 let dy = y - canvas.height / 2 - player.pitch
                 let raFix = Math.cos(fixAngle(player.angle - newAngle));
-                let tmpX = Math.cos(newAngle) * 256 * HEIGHTTOWIDTH * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
-                let tmpY = Math.sin(newAngle) * 256 * HEIGHTTOWIDTH * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
-                let texX = Math.abs(Math.floor(player.x * (images.seperate.brick.w / CUBESIZE) + tmpX) % 32);
-                let texY = Math.abs(Math.floor(player.y * (images.seperate.brick.w / CUBESIZE) + tmpY) % 32);
+                let tmpX = Math.cos(newAngle) * 256 * HEIGHTTOWIDTH * (TEXTURESIZE / CUBESIZE) / dy / raFix;
+                let tmpY = Math.sin(newAngle) * 256 * HEIGHTTOWIDTH * (TEXTURESIZE / CUBESIZE) / dy / raFix;
+                texX = Math.abs(Math.floor(player.x * (TEXTURESIZE / CUBESIZE) + tmpX));
+                let texY = Math.abs(Math.floor(player.y * (TEXTURESIZE / CUBESIZE) + tmpY));
 
-                let col = getImageDataFromSpriteSheet(images.seperate.brick, texX, texY, false)
+                let tex = this.floor[Math.floor(texX / CUBESIZE) + Math.floor(texY / CUBESIZE) * MAPSIZE]
+                let col = getImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE, false)
                 let fog = Math.floor(-Math.max(((Math.abs(tmpX) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY).clamp(0, 255), ((Math.abs(tmpY) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY)).clamp(0, 255))
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
                 c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), SIDERES)
@@ -116,19 +121,20 @@ class Map {
 
                 let dy = y - canvas.height / 2 - player.pitch
                 let raFix = Math.cos(fixAngle(player.angle - newAngle));
-                let tmpX = Math.cos(newAngle) * 256 * HEIGHTTOWIDTH * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
-                let tmpY = Math.sin(newAngle) * 256 * HEIGHTTOWIDTH * (images.seperate.brick.w / CUBESIZE) / dy / raFix;
-                let texX = Math.abs(Math.floor(-player.x * (images.seperate.brick.w / CUBESIZE) + tmpX) % 32);
-                let texY = Math.abs(Math.floor(-player.y * (images.seperate.brick.w / CUBESIZE) + tmpY) % 32);
+                let tmpX = Math.cos(newAngle) * 256 * HEIGHTTOWIDTH * (32 / CUBESIZE) / dy / raFix;
+                let tmpY = Math.sin(newAngle) * 256 * HEIGHTTOWIDTH * (32 / CUBESIZE) / dy / raFix;
+                texX = Math.abs(Math.floor(-player.x * (32 / CUBESIZE) + tmpX));
+                let texY = Math.abs(Math.floor(-player.y * (32 / CUBESIZE) + tmpY));
 
-                let col = getImageDataFromSpriteSheet(images.seperate.brick, texX, texY, false)
+                let tex = this.roof[Math.floor(texX / CUBESIZE) + Math.floor(texY / CUBESIZE) * MAPSIZE]
+                let col = getImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE, false)
                 let fog = -Math.max(((Math.abs(tmpX) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY).clamp(0, 255), ((Math.abs(tmpY) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY)).clamp(0, 255)
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
                 c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), SIDERES);
             }
         }
-        /*Mapeditor
-        
+        //Mapeditor
+        /*
         this.drawMapEditor()
         rays.forEach(ray => {
             c.drawLine({ from: player, to: { x: ray.x, y: ray.y, color: "black" }, lineWidth: 2 })
@@ -189,8 +195,8 @@ class Player {
         this.draw();
     }
     draw() {
-        c.fillRect(this.x - 2, this.y - 2, 4, 4)
-        c.drawLine({ from: this, to: { x: this.x + this.deltaX * 20, y: this.y + this.deltaY * 20 } })
+        //c.fillRect(this.x - 2, this.y - 2, 4, 4)
+        //c.drawLine({ from: this, to: { x: this.x + this.deltaX * 20, y: this.y + this.deltaY * 20 } })
     }
     getRay(angle) {
         let horizontalRay = this.getHorizontalRay(angle);
@@ -230,13 +236,13 @@ class Player {
                 mapX = Math.floor(rayX / CUBESIZE)
                 mapY = Math.floor(rayY / CUBESIZE)
                 mapIndex = mapX + mapY * MAPSIZE;
-                if (mapIndex >= 0 && mapIndex < Math.pow(MAPSIZE, 2) && map.map[mapIndex] > 0) { maxed = true } else {
+                if (mapIndex >= 0 && mapIndex < Math.pow(MAPSIZE, 2) && map.wall[mapIndex] != 0) { maxed = true } else {
                     rayX += rayOffseyX;
                     rayY += rayOffseyY;
                     dof++;
                 };
             }
-            return { x: rayX, y: rayY, side: 0, tex: map.map[mapIndex], dof: dof }
+            return { x: rayX, y: rayY, side: 0, tex: map.wall[mapIndex] || { x: 0, y: 0, w: 32, h: 32 }, dof: dof }
         }
     }
     getVerticalRay(angle) {
@@ -264,13 +270,13 @@ class Player {
                 mapX = Math.floor(rayX / CUBESIZE)
                 mapY = Math.floor(rayY / CUBESIZE)
                 mapIndex = mapX + mapY * MAPSIZE;
-                if (mapIndex >= 0 && mapIndex < Math.pow(MAPSIZE, 2) && map.map[mapIndex] > 0) { maxed = true } else {
+                if (mapIndex >= 0 && mapIndex < Math.pow(MAPSIZE, 2) && map.wall[mapIndex] != 0) { maxed = true } else {
                     rayX += rayOffseyX;
                     rayY += rayOffseyY;
                     dof++;
                 };
             }
-            return { x: rayX, y: rayY, side: 1, tex: map.map[mapIndex], dof: dof }
+            return { x: rayX, y: rayY, side: 1, tex: map.wall[mapIndex] || { x: 0, y: 0, w: 32, h: 32 }, dof: dof }
         }
     }
 }
