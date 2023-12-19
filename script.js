@@ -85,7 +85,7 @@ class Map {
 
             let lineWidth = canvas.width / RAYAMOUNT;
             let lineX = index * lineWidth;
-            ray.distance = Math.min(ray.distance,MAXDOF*CUBESIZE)
+            ray.distance = Math.min(ray.distance, MAXDOF * CUBESIZE)
             ray.distance *= Math.cos(player.angle - newAngle)
 
             let lineHeight = Math.floor((canvas.height * HEIGHTTOWIDTH / ray.distance))
@@ -114,7 +114,7 @@ class Map {
 
                 let tex = this.floor[Math.floor(texX / CUBESIZE) + Math.floor(texY / CUBESIZE) * MAPSIZE]
                 let col = getImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE, false)
-                let fog = Math.floor(-Math.max(((Math.abs(tmpX) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY).clamp(0, 255), ((Math.abs(tmpY) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY)).clamp(0, 255))
+                let fog = ((MAXDOF * CUBESIZE - distance(0, 0, Math.abs(tmpX), Math.abs(tmpY)))).clamp(0, 255) - FOGSTARTMODIFIER * 1.5
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
                 c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), SIDERES)
             }
@@ -129,7 +129,7 @@ class Map {
 
                 let tex = this.roof[Math.floor(texX / CUBESIZE) + Math.floor(texY / CUBESIZE) * MAPSIZE]
                 let col = getImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE, false)
-                let fog = -Math.max(((Math.abs(tmpX) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY).clamp(0, 255), ((Math.abs(tmpY) - MAXDOF * CUBESIZE + FOGSTARTMODIFIER) * FOGINTENSITY)).clamp(0, 255)
+                let fog = ((MAXDOF * CUBESIZE - distance(0, 0, Math.abs(tmpX), Math.abs(tmpY)))).clamp(0, 255) - FOGSTARTMODIFIER * 1.5
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
                 c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), SIDERES);
             }
