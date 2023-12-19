@@ -168,6 +168,8 @@ class Player {
             if (this.angle > 2 * Math.PI) { this.angle -= 2 * Math.PI }
             this.deltaX = Math.cos(this.angle);
             this.deltaY = Math.sin(this.angle);
+            this.deltaA = Math.cos(fixAngle(this.angle - Math.PI / 2));
+            this.deltaB = Math.sin(fixAngle(this.angle - Math.PI / 2));
         }
         if (pressedKeys['KeyW']) {
             if (!map.wall[Math.floor((this.x + this.deltaX * deltaTime) / CUBESIZE) + Math.floor((this.y + this.deltaY * deltaTime) / CUBESIZE) * MAPSIZE]) {
