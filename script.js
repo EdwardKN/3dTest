@@ -114,7 +114,7 @@ class Map {
 
                 let tex = this.floor[Math.floor(texX / CUBESIZE) + Math.floor(texY / CUBESIZE) * MAPSIZE]
                 let col = getImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE, false)
-                let fog = ((MAXDOF * CUBESIZE - distance(0, 0, Math.abs(tmpX), Math.abs(tmpY)))).clamp(0, 255) - FOGSTARTMODIFIER * 1.5
+                let fog = -(FOGSTARTMODIFIER * 1.5 - (MAXDOF * CUBESIZE - distance(0, 0, Math.abs(tmpX), Math.abs(tmpY)))).clamp(0, 255)
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
                 c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), SIDERES)
             }
@@ -129,7 +129,7 @@ class Map {
 
                 let tex = this.roof[Math.floor(texX / CUBESIZE) + Math.floor(texY / CUBESIZE) * MAPSIZE]
                 let col = getImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE, false)
-                let fog = ((MAXDOF * CUBESIZE - distance(0, 0, Math.abs(tmpX), Math.abs(tmpY)))).clamp(0, 255) - FOGSTARTMODIFIER * 1.5
+                let fog = -(FOGSTARTMODIFIER * 1.5 - (MAXDOF * CUBESIZE - distance(0, 0, Math.abs(tmpX), Math.abs(tmpY)))).clamp(0, 255)
                 c.fillStyle = rgb(col[0] + fog, col[1] + fog, col[2] + fog);
                 c.fillRect(Math.floor(lineX), y, Math.floor(lineWidth), SIDERES);
             }
@@ -195,11 +195,11 @@ class Player {
         }
         if (pressedKeys['ArrowUp']) {
             this.pitch += 15 * deltaTime;
-            this.pitch = this.pitch.clamp(-250, 250)
+            this.pitch = this.pitch.clamp(-300, 300)
         }
         if (pressedKeys['ArrowDown']) {
             this.pitch -= 15 * deltaTime;
-            this.pitch = this.pitch.clamp(-250, 250)
+            this.pitch = this.pitch.clamp(-300, 300)
         }
         this.draw();
     }
