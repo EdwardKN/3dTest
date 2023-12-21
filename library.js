@@ -308,8 +308,7 @@ async function loadSpriteSheet() {
     spritesheet = await response.json();
     spritesheetImage = new Image();
     spritesheetImage.src = "./images/texture.png";
-    spriteSheetWidth = spritesheetImage.width;
-    spritesheetImage.onload = setTimeout(getImageData, 100);
+    spritesheetImage.onload = getImageData;
 
 }
 async function loadImages() {
@@ -326,6 +325,7 @@ async function loadData() {
 }
 
 async function getImageData() {
+    spriteSheetWidth = spritesheetImage.width;
     let canv = document.createElement('canvas')
     let context = canv.getContext('2d');
     canv.width = spritesheetImage.width;

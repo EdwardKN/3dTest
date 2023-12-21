@@ -302,7 +302,7 @@ class Player {
                     dof++;
                 };
             }
-            return { x: rayX, y: rayY, side: 0, tex: map.wall[mapIndex] || { x: 1, y: 1, w: 32, h: 32 }, dof: dof }
+            return { x: rayX, y: rayY, side: 0, tex: map.wall[mapIndex] || Object.values(images.textures)[0], dof: dof }
         }
     }
     getVerticalRay(angle) {
@@ -336,7 +336,7 @@ class Player {
                     dof++;
                 };
             }
-            return { x: rayX, y: rayY, side: 1, tex: map.wall[mapIndex] || { x: 1, y: 1, w: 32, h: 32 }, dof: dof }
+            return { x: rayX, y: rayY, side: 1, tex: map.wall[mapIndex] || Object.values(images.textures)[0], dof: dof }
         }
     }
 }
