@@ -309,7 +309,7 @@ async function loadSpriteSheet() {
     spritesheetImage = new Image();
     spritesheetImage.src = "./images/texture.png";
     spriteSheetWidth = spritesheetImage.width;
-    spritesheetImage.onload = getImageData;
+    spritesheetImage.onload = setTimeout(getImageData, 100);
 
 }
 async function loadImages() {
