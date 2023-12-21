@@ -10,10 +10,16 @@ var scale = 0;
 
 const standardX = 16;
 const standardY = 9;
-const renderScale = 60; // 120 för 1920 till 1080
+const renderScale = 30; // 120 för 1920 till 1080
 
+canvas.width = renderScale * standardX;
+canvas.height = renderScale * standardY;
 
-window.onload = fixCanvas;
+var frameBuffer = new ImageData(canvas.width, canvas.height);
+
+window.onload = function () {
+    fixCanvas();
+};
 
 window.addEventListener("resize", fixCanvas);
 
@@ -49,8 +55,6 @@ renderCanvas.addEventListener("mouseup", function (e) {
 });
 
 function fixCanvas() {
-    canvas.width = renderScale * standardX;
-    canvas.height = renderScale * standardY;
     if (window.innerWidth * standardY > window.innerHeight * standardX) {
         renderCanvas.width = window.innerHeight * standardX / standardY;
         renderCanvas.height = window.innerHeight;
@@ -327,7 +331,7 @@ async function getImageData() {
     canv.width = spritesheetImage.width;
     canv.height = spritesheetImage.height;
     context.drawImage(spritesheetImage, 0, 0);
-    images.imageData = context.getImageData(0, 0, canv.width, canv.height).data
+    images.imageData = context.getImageData(0, 0, canv.width, canv.height)
 }
 class Sounds {
     constructor(filePath, sounds) {
@@ -370,7 +374,11 @@ class Sounds {
 
 function getImageDataFromSpriteSheet(frame, x, y, toRGB = true) {
     let start = (frame.x + x + (frame.y + y) * spriteSheetWidth) * 4
-    return !toRGB ? [images.imageData[start], images.imageData[start + 1], images.imageData[start + 2]] : rgb(images.imageData[start], images.imageData[start + 1], images.imageData[start + 2]);
+    return !toRGB ? [images.imageData.data[start], images.imageData.data[start + 1], images.imageData.data[start + 2]] : rgb(images.imageData.data[start], images.imageData.data[start + 1], images.imageData.data[start + 2]);
+}
+function getWholeImageDataFromSpriteSheet(frame, x, y) {
+    let start = (frame.x + x + (frame.y + y) * spriteSheetWidth) * 4
+    return start;
 }
 
 CanvasRenderingContext2D.prototype.drawImageFromSpriteSheet = function (frame, settingsOverride) {
