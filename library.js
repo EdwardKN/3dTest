@@ -10,7 +10,7 @@ var scale = 0;
 
 const standardX = 16;
 const standardY = 9;
-const renderScale = 30; // 120 för 1920 till 1080
+const renderScale = 60; // 120 för 1920 till 1080
 
 canvas.width = renderScale * standardX;
 canvas.height = renderScale * standardY;

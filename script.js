@@ -5,14 +5,14 @@ const MAPSIZE = 16;
 const CUBESIZE = 32;
 
 //VISUAL
-const FOGSTARTMODIFIER = 100;
+const FOGSTARTMODIFIER = 300;
 const FOGINTENSITY = 2;
 const HEIGHTTOWIDTH = 48;
 const FOV = 60 * toRad;
 const TEXTURESIZE = 32;
 
 // Graphics intensive
-const MAXDOF = 6;
+const MAXDOF = 16;
 const RAYAMOUNT = canvas.width;
 const SIDERES = 1;
 
@@ -46,11 +46,20 @@ function update() {
     renderC.drawImage(canvas, 0, 0, renderCanvas.width, renderCanvas.height);
 
 }
+class LightSource{
+    constructor(x,y,range,intensity){
+        this.x = x;
+        this.y = y;
+        this.range = range;
+        this.intensity = intensity;
+    }
+}
 class Map {
     constructor() {
         this.roof = [];
         this.wall = [];
         this.floor = [];
+        this.lightSources = [];
         this.init()
     }
     init() {
@@ -68,15 +77,20 @@ class Map {
     drawMapEditor() {
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
-                c.fillStyle = this.wall[x + y * MAPSIZE] == Object.values(images.textures)[0] ? "black" : "white";
-                if (detectCollision(x * CUBESIZE + 1, y * CUBESIZE + 1, CUBESIZE - 2, CUBESIZE - 2, mouse.x, mouse.y, 1, 1)) {
+                let isAtCoord = this.lightSources.filter(e => e.x == x && e.y == y).length == 1;
+                c.fillStyle = isAtCoord ? "black" : "white";
+                if (detectCollision(x * CUBESIZE/4 + 1, y * CUBESIZE/4 + 1, CUBESIZE/4 - 2, CUBESIZE/4 - 2, mouse.x, mouse.y, 1, 1)) {
                     c.fillStyle = "gray"
                     if (mouse.down) {
                         mouse.down = false;
-                        this.wall[x + y * MAPSIZE] = this.wall[x + y * MAPSIZE] == 0 ? Object.values(images.textures)[0] : 0;
+                        if(isAtCoord){
+                            this.lightSources.splice(this.lightSources.indexOf(this.lightSources.filter(e => e.x == x && e.y == y),1))
+                        }else{
+                            this.lightSources.push(new LightSource(x,y,50,5))
+                        }
                     }
                 }
-                c.fillRect(x * CUBESIZE + 1, y * CUBESIZE + 1, CUBESIZE - 2, CUBESIZE - 2)
+                c.fillRect(x * CUBESIZE/4 + 1, y * CUBESIZE/4 + 1, CUBESIZE/4 - 2, CUBESIZE/4 - 2)
             }
         }
     }
@@ -115,7 +129,13 @@ class Map {
             const FLOOREDLINEWIDTH = ~~(lineWidth);
             for (let y = 0; y < TEXTURESIZE; y++) {
                 let colStart = getWholeImageDataFromSpriteSheet(ray.tex, texX, y);
-                let fog = -(ray.distance - MAXDIST + FOGSTARTMODIFIER) * FOGINTENSITY
+                let fog = -(ray.distance - MAXDIST + FOGSTARTMODIFIER + 100) * FOGINTENSITY;
+                this.lightSources.forEach(lightsource => {
+                    if(!lightsource) return;
+                    let lightLevel = (lightsource.range - distance(lightsource.x*CUBESIZE, lightsource.y * CUBESIZE,ray.x,ray.y))*lightsource.intensity;
+                    if (lightLevel < 0) lightLevel = 0;
+                    fog += lightLevel
+                })
                 if (fog < -255) fog = -255;
                 if (fog > 0) fog = 0;
 
@@ -143,6 +163,12 @@ class Map {
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
                 let fogDist = distance(0, 0, Math.abs(tmpX), Math.abs(tmpY));
                 let fog = -(FOGSTARTMODIFIER * 1.5 - MAXDIST + fogDist)
+                this.lightSources.forEach(lightsource => {
+                    if(!lightsource) return;
+                    let lightLevel = (lightsource.range - distance(lightsource.x*CUBESIZE, lightsource.y * CUBESIZE,texX,texY))*lightsource.intensity;
+                    if (lightLevel < 0) lightLevel = 0;
+                    fog += lightLevel
+                })
                 if (fog < -255) fog = -255;
                 if (fog > 0) fog = 0;
 
@@ -162,14 +188,20 @@ class Map {
                 let multiplier = FLOORROOFMULTIPLIER / dy;
                 let tmpX = Math.cos(newAngle) * multiplier;
                 let tmpY = Math.sin(newAngle) * multiplier;
-                let texX = Math.abs(~~(-player.x * (32 / CUBESIZE) + tmpX));
-                let texY = Math.abs(~~(-player.y * (32 / CUBESIZE) + tmpY));
+                let texX = Math.abs(~~(-player.x * (TEXTURETOCUBE) + tmpX));
+                let texY = Math.abs(~~(-player.y * (TEXTURETOCUBE) + tmpY));
 
                 let texIndex = ~~(texX / CUBESIZE) + ~~(texY / CUBESIZE) * MAPSIZE
                 let tex = this.roof[texIndex]
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
                 let fogDist = distance(0, 0, Math.abs(tmpX), Math.abs(tmpY));
                 let fog = -(FOGSTARTMODIFIER * 1.5 - MAXDIST + fogDist)
+                this.lightSources.forEach(lightsource => {
+                    if(!lightsource) return;
+                    let lightLevel = (lightsource.range - distance(lightsource.x*CUBESIZE, lightsource.y * CUBESIZE,texX,texY))*lightsource.intensity;
+                    if (lightLevel < 0) lightLevel = 0;
+                    fog += lightLevel
+                })
                 if (fog < -255) fog = -255;
                 if (fog > 0) fog = 0;
                 for (let drawX = 0; drawX < FLOOREDLINEWIDTH; drawX++) {
@@ -184,11 +216,11 @@ class Map {
         }
         c.putImageData(frameBuffer, 0, 0)
         //Mapeditor
-        /*
+        
         this.drawMapEditor()
-        rays.forEach(ray => {
-            c.drawLine({ from: player, to: { x: ray.x, y: ray.y, color: "black" }, lineWidth: 2 })
-        })*/
+        //rays.forEach(ray => {
+          //  c.drawLine({ from: {x:player.x / 4, y:player.y / 4}, to: { x: ray.x/4, y: ray.y/4, color: "black" }, lineWidth: 2 })
+        //})
     }
 }
 
