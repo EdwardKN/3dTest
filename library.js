@@ -8,12 +8,12 @@ renderCanvas.style.zIndex = 0
 
 var scale = 0;
 
-const standardX = 16;
-const standardY = 9;
-const renderScale = 30; // 120 för 1920 till 1080
+const STANDARDX = 16;
+const STANDARDY = 9;
+const RENDERSCALE = 30; // 120 för 1920 till 1080
 
-canvas.width = renderScale * standardX;
-canvas.height = renderScale * standardY;
+canvas.width = RENDERSCALE * STANDARDX;
+canvas.height = RENDERSCALE * STANDARDY;
 
 var frameBuffer = new ImageData(canvas.width, canvas.height);
 
@@ -55,13 +55,13 @@ renderCanvas.addEventListener("mouseup", function (e) {
 });
 
 function fixCanvas() {
-    if (window.innerWidth * standardY > window.innerHeight * standardX) {
-        renderCanvas.width = window.innerHeight * standardX / standardY;
+    if (window.innerWidth * STANDARDY > window.innerHeight * STANDARDX) {
+        renderCanvas.width = window.innerHeight * STANDARDX / STANDARDY;
         renderCanvas.height = window.innerHeight;
         scale = renderCanvas.width / canvas.width;
     } else {
         renderCanvas.width = window.innerWidth;
-        renderCanvas.height = window.innerWidth * standardY / standardX;
+        renderCanvas.height = window.innerWidth * STANDARDY / STANDARDX;
         scale = renderCanvas.height / canvas.height;
     };
 };
@@ -497,8 +497,8 @@ CanvasRenderingContext2D.prototype.drawLine = function (settingsOverride) {
     this.stroke();
 }
 
-const toRad = Math.PI / 180
-const toDeg = 180 * Math.PI
+const TORAD = Math.PI / 180
+const TODEG = 180 * Math.PI
 
 function drawCircle(x, y, r, co) {
     c.beginPath();
@@ -536,10 +536,10 @@ function rectangleConverter(x, y, w, h) {
     return [x, y, w, h]
 }
 function distance(x1, y1, x2, y2) {
-    const xDist = x2 - x1;
-    const yDist = y2 - y1;
+    const XDIST = x2 - x1;
+    const YDIST = y2 - y1;
 
-    return Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
+    return Math.sqrt(Math.pow(XDIST, 2) + Math.pow(YDIST, 2));
 };
 
 function pointCircleCollide(point, circle, r) {
@@ -794,27 +794,27 @@ function to_screen_coordinate(x, y) {
 }
 
 function invert_matrix(a, b, c, d) {
-    const det = (1 / (a * d - b * c));
+    const DET = (1 / (a * d - b * c));
 
     return {
-        a: det * d,
-        b: det * -b,
-        c: det * -c,
-        d: det * a,
+        a: DET * d,
+        b: DET * -b,
+        c: DET * -c,
+        d: DET * a,
     }
 }
 
 function to_grid_coordinate(x, y) {
-    const a = 1 * 0.5;
-    const b = -1 * 0.5;
-    const c = 0.5 * 0.5;
-    const d = 0.5 * 0.5;
+    const A = 1 * 0.5;
+    const B = -1 * 0.5;
+    const C = 0.5 * 0.5;
+    const D = 0.5 * 0.5;
 
-    const inv = invert_matrix(a, b, c, d);
+    const INV = invert_matrix(A, B, C, D);
 
     return {
-        x: Math.floor(x * inv.a + y * inv.b),
-        y: Math.floor(x * inv.c + y * inv.d),
+        x: Math.floor(x * INV.a + y * INV.b),
+        y: Math.floor(x * INV.c + y * INV.d),
     }
 }
 
@@ -830,11 +830,11 @@ var updateDelta = false;
 
 function refreshLoop() {
     window.requestAnimationFrame(function () {
-        const now = performance.now();
-        while (times.length > 0 && times[0] <= now - 1000) {
+        const NOW = performance.now();
+        while (times.length > 0 && times[0] <= NOW - 1000) {
             times.shift();
         }
-        times.push(now);
+        times.push(NOW);
         fps = times.length;
         deltaTime = updateDelta ? 60 / fps : 1;
         refreshLoop();
@@ -955,8 +955,8 @@ function getIndexFromObject(obj, key) {
 }
 
 const divide = (num = 100, n = 4) => {
-    const f = Math.floor(num / n);
-    return [...Array(n)].map((_, i) => i - n + 1 ? f : num - i * f);
+    const F = Math.floor(num / n);
+    return [...Array(n)].map((_, i) => i - n + 1 ? F : num - i * F);
 }
 
 String.prototype.capitalize = function () {

@@ -8,7 +8,7 @@ const CUBESIZE = 32;
 const FOGSTARTMODIFIER = 100;
 const FOGINTENSITY = 2;
 const HEIGHTTOWIDTH = 48;
-const FOV = 60 * toRad;
+const FOV = 60 * TORAD;
 const TEXTURESIZE = 32;
 
 // Graphics intensive
@@ -128,7 +128,7 @@ class Map {
                     }
                 }
             }
-            const FLOORROOFMULTIPLIER = (256 / 56 * renderScale) * HEIGHTTOWIDTH * TEXTURETOCUBE / raFix;
+            const FLOORROOFMULTIPLIER = (256 / 56 * RENDERSCALE) * HEIGHTTOWIDTH * TEXTURETOCUBE / raFix;
             let upper = ~~(lineOffset + lineHeight + PITCH)
             for (let y = upper; y < DRAWHEIGHT; y += SIDERES) {
                 let dy = y - DRAWHEIGHT / 2 - PITCH
@@ -245,12 +245,12 @@ class Player {
             }
         }
         if (pressedKeys['ArrowUp']) {
-            this.pitch += renderScale / 4 * deltaTime;
-            this.pitch = this.pitch.clamp(-renderScale * 8, renderScale * 8)
+            this.pitch += RENDERSCALE / 4 * deltaTime;
+            this.pitch = this.pitch.clamp(-RENDERSCALE * 8, RENDERSCALE * 8)
         }
         if (pressedKeys['ArrowDown']) {
-            this.pitch -= renderScale / 4 * deltaTime;
-            this.pitch = this.pitch.clamp(-renderScale * 8, renderScale * 8)
+            this.pitch -= RENDERSCALE / 4 * deltaTime;
+            this.pitch = this.pitch.clamp(-RENDERSCALE * 8, RENDERSCALE * 8)
         }
         this.draw();
     }
