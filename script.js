@@ -128,15 +128,15 @@ class Map {
                     }
                 }
             }
-            const FLOORROOFMULTIPLIER = (256 / 60 * renderScale) * HEIGHTTOWIDTH * TEXTURETOCUBE / raFix;
+            const FLOORROOFMULTIPLIER = (256 / 56 * renderScale) * HEIGHTTOWIDTH * TEXTURETOCUBE / raFix;
             let upper = ~~(lineOffset + lineHeight + PITCH)
             for (let y = upper; y < DRAWHEIGHT; y += SIDERES) {
                 let dy = y - DRAWHEIGHT / 2 - PITCH
                 let multiplier = FLOORROOFMULTIPLIER / dy;
                 let tmpX = Math.cos(newAngle) * multiplier;
                 let tmpY = Math.sin(newAngle) * multiplier;
-                let texX = Math.abs(~~(player.x * (TEXTURETOCUBE) + tmpX));
-                let texY = Math.abs(~~(player.y * (TEXTURETOCUBE) + tmpY));
+                let texX = Math.abs(~~(player.x * (TEXTURETOCUBE) + tmpX)) + 1;
+                let texY = Math.abs(~~(player.y * (TEXTURETOCUBE) + tmpY)) + 1;
 
                 let texIndex = ~~(texX / CUBESIZE) + ~~(texY / CUBESIZE) * MAPSIZE;
                 let tex = this.floor[texIndex]
@@ -162,8 +162,8 @@ class Map {
                 let multiplier = FLOORROOFMULTIPLIER / dy;
                 let tmpX = Math.cos(newAngle) * multiplier;
                 let tmpY = Math.sin(newAngle) * multiplier;
-                let texX = Math.abs(~~(-player.x * (32 / CUBESIZE) + tmpX));
-                let texY = Math.abs(~~(-player.y * (32 / CUBESIZE) + tmpY));
+                let texX = Math.abs(~~(-player.x * (32 / CUBESIZE) + tmpX)) + 1;
+                let texY = Math.abs(~~(-player.y * (32 / CUBESIZE) + tmpY)) + 1;
 
                 let texIndex = ~~(texX / CUBESIZE) + ~~(texY / CUBESIZE) * MAPSIZE
                 let tex = this.roof[texIndex]
