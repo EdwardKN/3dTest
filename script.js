@@ -84,7 +84,7 @@ class Map {
                     if (mouse.down) {
                         mouse.down = false;
                         if(isAtCoord){
-                            this.lightSources.splice(this.lightSources.indexOf(this.lightSources.filter(e => e.x == x && e.y == y),1))
+                            this.lightSources.splice(this.lightSources.indexOf(this.lightSources.filter(e => e.x == x && e.y == y)[0],1))
                         }else{
                             this.lightSources.push(new LightSource(x,y,50,5))
                         }
@@ -129,21 +129,24 @@ class Map {
             const FLOOREDLINEWIDTH = ~~(lineWidth);
             for (let y = 0; y < TEXTURESIZE; y++) {
                 let colStart = getWholeImageDataFromSpriteSheet(ray.tex, texX, y);
-                let fog = -(ray.distance - MAXDIST + FOGSTARTMODIFIER + 100) * FOGINTENSITY;
+                let fog = -~~(ray.distance - MAXDIST + FOGSTARTMODIFIER + 100) * FOGINTENSITY;
+                let lightLevel = 0;
                 this.lightSources.forEach(lightsource => {
                     if(!lightsource) return;
-                    let lightLevel = (lightsource.range - distance(lightsource.x*CUBESIZE, lightsource.y * CUBESIZE,ray.x,ray.y))*lightsource.intensity;
-                    if (lightLevel < 0) lightLevel = 0;
-                    fog += lightLevel
+                    lightLevel += ~~((lightsource.range - ~~distance(lightsource.x*CUBESIZE, lightsource.y * CUBESIZE,ray.x,ray.y))*lightsource.intensity);
+                    
+                    if(lightLevel > 255) lightLevel = 255;
+                    if(lightLevel < 0) lightLevel = 0;
                 })
-                if (fog < -255) fog = -255;
-                if (fog > 0) fog = 0;
+                let totalLight = fog + lightLevel;
+                if(totalLight > 0) totalLight = 0;
+                if(totalLight < - 255) totalLight = -255;
 
                 for (let drawX = 0; drawX < lineWidth; drawX++) {
                     for (let drawY = 0; drawY < CEILEDWALLPIXELHEIGHT; drawY++) {
                         let dataIndex = (lineX + drawX + (FLOOREDLINEOFFSET + ~~(WALLPIXELHEIGHT * y) + PITCH + drawY) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
-                            frameBuffer.data[dataIndex + i] = (i < 3 ? fog : 0) + images.imageData.data[colStart + i];
+                            frameBuffer.data[dataIndex + i] = (i < 3 ? totalLight : 0) + images.imageData.data[colStart + i];
                         }
                     }
                 }
@@ -162,21 +165,24 @@ class Map {
                 let tex = this.floor[texIndex]
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
                 let fogDist = distance(0, 0, Math.abs(tmpX), Math.abs(tmpY));
-                let fog = -(FOGSTARTMODIFIER * 1.5 - MAXDIST + fogDist)
+                let fog = -~~(FOGSTARTMODIFIER * 1.5 - MAXDIST + fogDist)
+                let lightLevel = 0;
                 this.lightSources.forEach(lightsource => {
                     if(!lightsource) return;
-                    let lightLevel = (lightsource.range - distance(lightsource.x*CUBESIZE, lightsource.y * CUBESIZE,texX,texY))*lightsource.intensity;
-                    if (lightLevel < 0) lightLevel = 0;
-                    fog += lightLevel
+                    lightLevel += ~~((lightsource.range - ~~distance(lightsource.x*CUBESIZE, lightsource.y * CUBESIZE,texX,texY))*lightsource.intensity);
+                    
+                    if(lightLevel > 255) lightLevel = 255;
+                    if(lightLevel < 0) lightLevel = 0;
                 })
-                if (fog < -255) fog = -255;
-                if (fog > 0) fog = 0;
+                let totalLight = fog + lightLevel;
+                if(totalLight > 0) totalLight = 0;
+                if(totalLight < - 255) totalLight = -255;
 
                 for (let drawX = 0; drawX < FLOOREDLINEWIDTH; drawX++) {
                     for (let drawY = 0; drawY < SIDERES; drawY++) {
                         let dataIndex = (lineX + drawX + (y + drawY) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
-                            frameBuffer.data[dataIndex + i] = (i < 3 ? fog : 0) + images.imageData.data[colStart + i];
+                            frameBuffer.data[dataIndex + i] = (i < 3 ? totalLight : 0) + images.imageData.data[colStart + i];
                         }
                     }
                 }
@@ -195,20 +201,24 @@ class Map {
                 let tex = this.roof[texIndex]
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
                 let fogDist = distance(0, 0, Math.abs(tmpX), Math.abs(tmpY));
-                let fog = -(FOGSTARTMODIFIER * 1.5 - MAXDIST + fogDist)
+                let fog = -~~(FOGSTARTMODIFIER * 1.5 - MAXDIST + fogDist)
+                let lightLevel = 0;
                 this.lightSources.forEach(lightsource => {
                     if(!lightsource) return;
-                    let lightLevel = (lightsource.range - distance(lightsource.x*CUBESIZE, lightsource.y * CUBESIZE,texX,texY))*lightsource.intensity;
-                    if (lightLevel < 0) lightLevel = 0;
-                    fog += lightLevel
+                    lightLevel += ~~((lightsource.range - ~~distance(lightsource.x*CUBESIZE, lightsource.y * CUBESIZE,texX,texY))*lightsource.intensity);
+                    
+                    if(lightLevel > 255) lightLevel = 255;
+                    if(lightLevel < 0) lightLevel = 0;
                 })
-                if (fog < -255) fog = -255;
-                if (fog > 0) fog = 0;
+                let totalLight = fog + lightLevel;
+                if(totalLight > 0) totalLight = 0;
+                if(totalLight < - 255) totalLight = -255;
+
                 for (let drawX = 0; drawX < FLOOREDLINEWIDTH; drawX++) {
                     for (let drawY = 0; drawY < SIDERES; drawY++) {
                         let dataIndex = (lineX + drawX + (y + drawY) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
-                            frameBuffer.data[dataIndex + i] = (i < 3 ? fog : 0) + images.imageData.data[colStart + i];
+                            frameBuffer.data[dataIndex + i] = (i < 3 ? totalLight : 0) + images.imageData.data[colStart + i];
                         }
                     }
                 }
