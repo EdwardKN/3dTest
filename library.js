@@ -377,8 +377,11 @@ function getImageDataFromSpriteSheet(frame, x, y, toRGB = true) {
     return !toRGB ? [images.imageData.data[start], images.imageData.data[start + 1], images.imageData.data[start + 2]] : rgb(images.imageData.data[start], images.imageData.data[start + 1], images.imageData.data[start + 2]);
 }
 function getWholeImageDataFromSpriteSheet(frame, x, y) {
-    let start = (frame.x + x + (frame.y + y) * spriteSheetWidth) * 4
-    return start;
+    try {
+        let start = (frame.x + x + (frame.y + y) * spriteSheetWidth) * 4
+        return start;
+    } catch { }
+
 }
 
 CanvasRenderingContext2D.prototype.drawImageFromSpriteSheet = function (frame, settingsOverride) {
@@ -740,7 +743,7 @@ Number.prototype.clamp = function (min, max) {
 };
 
 function angleFromPoints(x, y, x2, y2) {
-    return Math.atan2(y2 - y, x2 - x) * 180 / Math.PI
+    return Math.atan2(y2 - y, x2 - x)
 }
 function angle(cx, cy, ex, ey) {
     var dy = ey - cy;
