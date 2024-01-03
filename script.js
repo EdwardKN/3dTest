@@ -57,14 +57,14 @@ class Light {
         this.strength = strength;
     }
 
-    rayTrace(x, y) {
+    rayTrace(x, y, offset) {
         let minDist = distance(x, y, this.x * CUBESIZE + CUBESIZE / 2, this.y * CUBESIZE + CUBESIZE / 2);
 
         if (minDist > this.strength * CUBESIZE) {
             return 0;
         }
         let degree = fixAngle(angleFromPoints(x, y, this.x * CUBESIZE + CUBESIZE / 2, this.y * CUBESIZE + CUBESIZE / 2) + 0.0001);
-        let ray = getRay({ x: x - Math.cos(degree)*4, y: y - Math.sin(degree)*4 }, degree, this.strength, true)
+        let ray = getRay({ x: x - Math.cos(degree) * offset, y: y - Math.sin(degree) * offset }, degree, this.strength, true)
 
         return ray.distance < minDist ? 0 : Math.max(0, this.strength * CUBESIZE - Math.min(ray.distance, minDist))
     }
@@ -78,11 +78,15 @@ class Map {
         this.init()
     }
     init() {
+        let tmpMap = new MazeBuilder((MAPSIZE - 1) / 2, (MAPSIZE - 1) / 2).getMaze();
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
                 this.roof.push(Object.values(images.textures)[0])
-                this.wall.push((x == 0 || y == 0 || x == MAPSIZE - 1 || y == MAPSIZE - 1) ? Object.values(images.textures)[0] : 0)
+                this.wall.push(tmpMap[x][y] ? Object.values(images.textures)[0] : 0)
                 this.floor.push(Object.values(images.textures)[0])
+                if (tmpMap[x][y] == 0 && Math.random() > 0.7) {
+                    this.lights.push(new Light(x, y, 4))
+                }
             }
         }
     }
@@ -159,10 +163,10 @@ class Map {
             const CEILEDWALLPIXELHEIGHT = Math.ceil(WALLPIXELHEIGHT)
             const FLOOREDLINEOFFSET = ~~(lineOffset);
             const FLOOREDLINEWIDTH = ~~(lineWidth);
-            
+
             let light = AMBIENTLIGHT;
             this.lights.forEach(lightSource => {
-                light += lightSource.rayTrace(ray.x, ray.y)
+                light += lightSource.rayTrace(ray.x, ray.y, 1)
             })
             if (light < -255) light = -255;
             if (light > 0) light = 0;
@@ -178,7 +182,7 @@ class Map {
                     }
                 }
             }
-            const FLOORROOFMULTIPLIER = (256 / 56 * RENDERSCALE) * HEIGHTTOWIDTH * TEXTURETOCUBE / raFix;
+            const FLOORROOFMULTIPLIER = (256 / 58 * RENDERSCALE) * HEIGHTTOWIDTH * TEXTURETOCUBE / raFix;
             let upper = ~~(lineOffset + lineHeight + PITCH)
             for (let y = upper; y < DRAWHEIGHT; y += SIDERES) {
                 let dy = y - DRAWHEIGHT / 2 - PITCH
@@ -193,7 +197,7 @@ class Map {
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
                 let light = AMBIENTLIGHT;
                 this.lights.forEach(lightSource => {
-                    light += lightSource.rayTrace(texX / TEXTURETOCUBE, texY / TEXTURETOCUBE)
+                    light += lightSource.rayTrace(texX / TEXTURETOCUBE, texY / TEXTURETOCUBE, 1)
 
                 })
                 if (light < -255) light = -255;
@@ -223,7 +227,7 @@ class Map {
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
                 let light = AMBIENTLIGHT;
                 this.lights.forEach(lightSource => {
-                    light += lightSource.rayTrace(texX / TEXTURETOCUBE, texY / TEXTURETOCUBE)
+                    light += lightSource.rayTrace(texX / TEXTURETOCUBE, texY / TEXTURETOCUBE, 1)
                 })
                 if (light < -255) light = -255;
                 if (light > 0) light = 0;
