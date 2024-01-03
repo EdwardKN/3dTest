@@ -64,7 +64,7 @@ class Light {
             return 0;
         }
         let degree = fixAngle(angleFromPoints(x, y, this.x * CUBESIZE + CUBESIZE / 2, this.y * CUBESIZE + CUBESIZE / 2) + 0.0001);
-        let ray = getRay({ x: x - Math.cos(degree), y: y - Math.sin(degree) }, degree, this.strength, true)
+        let ray = getRay({ x: x - Math.cos(degree)*4, y: y - Math.sin(degree)*4 }, degree, this.strength, true)
 
         return ray.distance < minDist ? 0 : Math.max(0, this.strength * CUBESIZE - Math.min(ray.distance, minDist))
     }
