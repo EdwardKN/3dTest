@@ -85,6 +85,15 @@ class Map {
                 this.wall.push(tmpMap[x][y] ? Object.values(images.textures)[0] : 0)
                 this.floor.push(Object.values(images.textures)[0])
                 if (tmpMap[x][y] == 0 && Math.random() > 0.7) {
+                    let tmp = false;
+                    this.lights.forEach(light => {
+                        if (distance(light.x, light.y, x, y) < 2) {
+                            tmp = true;
+                        }
+                    })
+                    if (tmp) {
+                        continue;
+                    }
                     this.lights.push(new Light(x, y, 4))
                 }
             }
