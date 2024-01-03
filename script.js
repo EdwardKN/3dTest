@@ -64,18 +64,7 @@ class Light {
             return 0;
         }
         let degree = fixAngle(angleFromPoints(x, y, this.x * CUBESIZE + CUBESIZE / 2, this.y * CUBESIZE + CUBESIZE / 2) + 0.0001);
-        let ray = getRay({ x: x, y: y }, degree, this.strength, true)
-
-        /*c.fillStyle = "blue"
-        c.fillRect(x, y, 4, 4)
-        c.fillStyle = "red"
-        c.fillRect(this.x * CUBESIZE, this.y * CUBESIZE, CUBESIZE, CUBESIZE)
-        //console.log(ray.distance, minDist)
-
-        c.drawLine({ from: { x: x, y: y }, color: "black", to: { x: this.x * CUBESIZE + CUBESIZE / 2, y: this.y * CUBESIZE + CUBESIZE / 2 } })
-
-        c.font = "10px Arial"
-        c.fillText(~~ray.distance, x, y)*/
+        let ray = getRay({ x: x - Math.cos(degree), y: y - Math.sin(degree) }, degree, this.strength, true)
 
         return ray.distance < minDist ? 0 : Math.max(0, this.strength * CUBESIZE - Math.min(ray.distance, minDist))
     }
