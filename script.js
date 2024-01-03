@@ -159,14 +159,16 @@ class Map {
             const CEILEDWALLPIXELHEIGHT = Math.ceil(WALLPIXELHEIGHT)
             const FLOOREDLINEOFFSET = ~~(lineOffset);
             const FLOOREDLINEWIDTH = ~~(lineWidth);
+            
+            let light = AMBIENTLIGHT;
+            this.lights.forEach(lightSource => {
+                light += lightSource.rayTrace(ray.x, ray.y)
+            })
+            if (light < -255) light = -255;
+            if (light > 0) light = 0;
+
             for (let y = 0; y < TEXTURESIZE; y++) {
                 let colStart = getWholeImageDataFromSpriteSheet(ray.tex, texX, y);
-                let light = AMBIENTLIGHT;
-                this.lights.forEach(lightSource => {
-                    light += lightSource.rayTrace(ray.x, ray.y)
-                })
-                if (light < -255) light = -255;
-                if (light > 0) light = 0;
                 for (let drawX = 0; drawX < lineWidth; drawX++) {
                     for (let drawY = 0; drawY < CEILEDWALLPIXELHEIGHT; drawY++) {
                         let dataIndex = (lineX + drawX + (FLOOREDLINEOFFSET + ~~(WALLPIXELHEIGHT * y) + PITCH + drawY) * DRAWWIDTH) * 4
