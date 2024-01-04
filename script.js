@@ -1,17 +1,22 @@
 var map = undefined;
 
 //MAP
-const MAPSIZE = 16;
+const MAPSIZE = 256;
 const CUBESIZE = 32;
+const LIGHTFREQUENCY = 3
+const LIGHTPROBABILITY = 0.7;
+const LIGHTSTRENGTH = 4;
 
 //VISUAL
 const AMBIENTLIGHT = -130;
 const HEIGHTTOWIDTH = 48;
 const FOV = 60 * TORAD;
 const TEXTURESIZE = 128;
+const FLASHLIGHTSTRENGTH = 3;
 
-// Graphics intensive
-const MAXDOF = 30;
+// Processing intensive
+const LIGHTRENDERDISTANCE = 4;
+const MAXDOF = 50;
 const RAYAMOUNT = canvas.width;
 const SIDERES = 1;
 
@@ -28,7 +33,8 @@ var player = undefined;
 async function init() {
     await loadData();
     map = new Map(MAPSIZE, CUBESIZE);
-    player = new Player(100, 100)
+    player = new Player(100, 110, FLASHLIGHTSTRENGTH)
+    map.lights.push(player.flashLight);
     setTimeout(() => {
         update();
     }, 1000);
@@ -50,6 +56,52 @@ function update() {
     renderC.drawImage(canvas, 0, 0, renderCanvas.width, renderCanvas.height);
 
 }
+class Sprite {
+    constructor(x, y, z, width, height) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.width = width;
+        this.height = height;
+    }
+    draw() {
+
+        let planeX = Math.cos(player.angle + Math.PI / 2) * Math.sin(FOV / 2);
+        let planeY = Math.sin(player.angle + Math.PI / 2) * Math.sin(FOV / 2);
+
+        let spriteX = this.x - player.x;
+        let spriteY = this.y - player.y;
+
+        //transform sprite with the inverse camera matrix
+        // [ planeX   dirX ] -1                                       [ dirY      -dirX ]
+        // [               ]       =  1/(planeX*dirY-dirX*planeY) *   [                 ]
+        // [ planeY   dirY ]                                          [ -planeY  planeX ]
+
+        let invDet = 1.0 / (planeX * player.deltaY - player.deltaX * planeY); //required for correct matrix multiplication
+
+        let transformX = invDet * (player.deltaY * spriteX - player.deltaX * spriteY);
+        let transformY = invDet * (-planeY * spriteX + planeX * spriteY); //this is actually the depth inside the screen, that what Z is in 3D
+
+        if (transformY < 0) return;
+
+        let spriteScreenX = ((canvas.width / 2) * (1 + transformX / transformY));
+
+        //calculate height of the sprite on screen
+        let spriteHeight = Math.abs((canvas.height / (transformY))); //using 'transformY' instead of the real distance prevents fisheye
+        //calculate lowest and highest pixel to fill in current stripe
+        let drawStartY = -spriteHeight / 2 + canvas.height / 2 + player.pitch;
+
+        //calculate width of the sprite
+        let spriteWidth = (canvas.height / (transformY));
+        let drawStartX = -spriteWidth / 2 + spriteScreenX;
+        let drawEndX = drawStartX - spriteWidth * this.width / 2 + spriteWidth * this.width;
+        for (let x = ~~(drawStartX - spriteWidth * this.width / 2); x < drawEndX; x++) {
+            if (transformY > map.rayZBuffer[x]) continue;
+            c.fillStyle = "yellow"
+            c.fillRect(x, ~~(drawStartY - spriteHeight * this.height / 2), 1, ~~(spriteHeight * this.height))
+        }
+    }
+}
 class Light {
     constructor(x, y, strength) {
         this.x = x;
@@ -58,13 +110,19 @@ class Light {
     }
 
     rayTrace(x, y, offset) {
-        let minDist = distance(x, y, this.x * CUBESIZE + CUBESIZE / 2, this.y * CUBESIZE + CUBESIZE / 2);
+        let specialCase = 1;
+        if (this.x % 1 != 0 && this.y % 1 != 0) {
+            specialCase = 0;
+        }
+        let minDist = distance(x, y, this.x * CUBESIZE + CUBESIZE / 2 * specialCase, this.y * CUBESIZE + CUBESIZE / 2 * specialCase);
 
         if (minDist > this.strength * CUBESIZE) {
             return 0;
         }
-        let degree = fixAngle(angleFromPoints(x, y, this.x * CUBESIZE + CUBESIZE / 2, this.y * CUBESIZE + CUBESIZE / 2) + 0.0001);
+
+        let degree = fixAngle(angleFromPoints(x, y, this.x * CUBESIZE + CUBESIZE / 2 * specialCase, this.y * CUBESIZE + CUBESIZE / 2 * specialCase) + 0.0001);
         let ray = getRay({ x: x - Math.cos(degree) * offset, y: y - Math.sin(degree) * offset }, degree, this.strength, true)
+
 
         return ray.distance < minDist ? 0 : Math.max(0, this.strength * CUBESIZE - Math.min(ray.distance, minDist))
     }
@@ -75,6 +133,8 @@ class Map {
         this.wall = [];
         this.floor = [];
         this.lights = [];
+        this.sprites = [];
+        this.rayZBuffer = [];
         this.init()
     }
     init() {
@@ -84,23 +144,31 @@ class Map {
                 this.roof.push(Object.values(images.textures)[0])
                 this.wall.push(tmpMap[x][y] ? Object.values(images.textures)[0] : 0)
                 this.floor.push(Object.values(images.textures)[0])
-                if (tmpMap[x][y] == 0 && Math.random() > 0.7) {
+                if (tmpMap[x][y] == 0 && Math.random() > LIGHTPROBABILITY) {
                     let tmp = false;
                     this.lights.forEach(light => {
-                        if (distance(light.x, light.y, x, y) < 2) {
+                        if (distance(light.x, light.y, x, y) < LIGHTFREQUENCY) {
                             tmp = true;
                         }
                     })
                     if (tmp) {
                         continue;
                     }
-                    this.lights.push(new Light(x, y, 4))
+                    this.lights.push(new Light(x, y, LIGHTSTRENGTH))
                 }
             }
         }
+
+        //this.sprites.push(new Sprite(150, 100, 0, 20, 20))
     }
     draw() {
         this.drawRay();
+        this.drawSprites();
+    }
+    drawSprites() {
+        this.sprites.forEach(sprite => {
+            sprite.draw();
+        })
     }
     drawMapEditor() {
         c.fillStyle = "red"
@@ -141,10 +209,13 @@ class Map {
     }
     drawRay() {
         let rays = [];
+        this.rayZBuffer = [];
 
         const DRAWHEIGHT = canvas.height;
         const DRAWWIDTH = canvas.width;
         const PITCH = ~~(player.pitch);
+
+        const FILTEREDLIGHTS = this.lights.filter(e => distance(player.x, player.y, e.x * CUBESIZE, e.y * CUBESIZE) < e.strength * CUBESIZE * LIGHTRENDERDISTANCE);
 
         for (let index = 0; index < RAYAMOUNT; index++) {
             let angle = (player.angle - FOV / 2) + index * FOV / RAYAMOUNT;
@@ -157,6 +228,8 @@ class Map {
             ray.distance = Math.min(ray.distance, MAXDIST)
             let raFix = Math.cos(player.angle - newAngle)
             ray.distance *= raFix
+
+            this.rayZBuffer.push(ray.distance);
 
             let lineHeight = ~~((DRAWHEIGHT * HEIGHTTOWIDTH / ray.distance))
             let lineOffset = DRAWHEIGHT / 2 - lineHeight / 2;
@@ -174,7 +247,7 @@ class Map {
             const FLOOREDLINEWIDTH = ~~(lineWidth);
 
             let light = AMBIENTLIGHT;
-            this.lights.forEach(lightSource => {
+            FILTEREDLIGHTS.forEach(lightSource => {
                 light += lightSource.rayTrace(ray.x, ray.y, 1)
             })
             if (light < -255) light = -255;
@@ -205,9 +278,15 @@ class Map {
                 let tex = this.floor[texIndex]
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
                 let light = AMBIENTLIGHT;
-                this.lights.forEach(lightSource => {
-                    light += lightSource.rayTrace(texX / TEXTURETOCUBE, texY / TEXTURETOCUBE, 1)
+                let texXToTexToCube = texX / TEXTURETOCUBE;
+                let texYToTexToCube = texY / TEXTURETOCUBE;
+                FILTEREDLIGHTS.forEach(lightSource => {
+                    let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
 
+                    if (minDist > lightSource.strength * CUBESIZE) {
+                        return;
+                    }
+                    light += lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1)
                 })
                 if (light < -255) light = -255;
                 if (light > 0) light = 0;
@@ -235,8 +314,15 @@ class Map {
                 let tex = this.roof[texIndex]
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
                 let light = AMBIENTLIGHT;
-                this.lights.forEach(lightSource => {
-                    light += lightSource.rayTrace(texX / TEXTURETOCUBE, texY / TEXTURETOCUBE, 1)
+                let texXToTexToCube = texX / TEXTURETOCUBE;
+                let texYToTexToCube = texY / TEXTURETOCUBE;
+                FILTEREDLIGHTS.forEach(lightSource => {
+                    let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
+
+                    if (minDist > lightSource.strength * CUBESIZE) {
+                        return;
+                    }
+                    light += lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1)
                 })
                 if (light < -255) light = -255;
                 if (light > 0) light = 0;
@@ -253,18 +339,19 @@ class Map {
         c.putImageData(frameBuffer, 0, 0)
         //Mapeditor
 
-        this.drawLightEditor()
-        this.drawMapEditor()
-        c.globalAlpha = 0.03;
+        //this.drawLightEditor()
+        //this.drawMapEditor()
+
+        /*c.globalAlpha = 0.03;
         rays.forEach(ray => {
             c.drawLine({ from: { x: player.x * EDITORSCALE, y: player.y * EDITORSCALE }, to: { x: ray.x * EDITORSCALE, y: ray.y * EDITORSCALE, color: "black" }, lineWidth: 1 })
         })
-        c.globalAlpha = 1;
+        c.globalAlpha = 1;*/
     }
 }
 
 class Player {
-    constructor(x, y) {
+    constructor(x, y, lightStrength) {
         this.x = x;
         this.y = y;
         this.angle = 0.001;
@@ -273,6 +360,7 @@ class Player {
         this.deltaA = 0;
         this.deltaB = -1;
         this.pitch = 0;
+        this.flashLight = new Light(this.x, this.y, lightStrength);
     }
     update() {
         if (pressedKeys['ArrowLeft']) {
@@ -324,10 +412,12 @@ class Player {
             this.pitch = this.pitch.clamp(-RENDERSCALE * 12, RENDERSCALE * 12)
         }
         this.draw();
+        this.flashLight.x = this.x / CUBESIZE;
+        this.flashLight.y = this.y / CUBESIZE;
     }
     draw() {
         //c.fillRect(this.x - 2, this.y - 2, 4, 4)
-        //c.drawLine({ from: this, to: { x: this.x + this.deltaX * 20, y: this.y + this.deltaY * 20 } })
+        //c.drawLine({ from: { x: canvas.width / 2, y: canvas.height / 2 }, to: { x: (canvas.width / 2 + this.deltaX * 20), y: (canvas.height / 2 + this.deltaY * 20) }, color: "yellow" })
     }
 }
 
