@@ -8,13 +8,18 @@ const LIGHTPROBABILITY = 0.7;
 const LIGHTSTRENGTH = 4;
 
 //VISUAL
-const AMBIENTLIGHT = -130;
+const AMBIENTLIGHT = {
+    r: -130,
+    g: -130,
+    b: -130
+};
 const HEIGHTTOWIDTH = 48;
 const FOV = 60 * TORAD;
 const TEXTURESIZE = 128;
 const FLASHLIGHTSTRENGTH = 3;
 
 // Processing intensive
+const SPRITERENDERDISTANCE = 10;
 const LIGHTRENDERDISTANCE = 4;
 const MAXDOF = 50;
 const RAYAMOUNT = canvas.width;
@@ -57,12 +62,13 @@ function update() {
 
 }
 class Sprite {
-    constructor(x, y, z, width, height) {
+    constructor(x, y, z, width, height, img) {
         this.x = x;
         this.y = y;
         this.z = z;
         this.width = width;
         this.height = height;
+        this.img = img;
     }
     draw() {
 
@@ -72,41 +78,38 @@ class Sprite {
         let spriteX = this.x - player.x;
         let spriteY = this.y - player.y;
 
-        //transform sprite with the inverse camera matrix
-        // [ planeX   dirX ] -1                                       [ dirY      -dirX ]
-        // [               ]       =  1/(planeX*dirY-dirX*planeY) *   [                 ]
-        // [ planeY   dirY ]                                          [ -planeY  planeX ]
-
-        let invDet = 1.0 / (planeX * player.deltaY - player.deltaX * planeY); //required for correct matrix multiplication
+        let invDet = 1.0 / (planeX * player.deltaY - player.deltaX * planeY);
 
         let transformX = invDet * (player.deltaY * spriteX - player.deltaX * spriteY);
-        let transformY = invDet * (-planeY * spriteX + planeX * spriteY); //this is actually the depth inside the screen, that what Z is in 3D
+        let transformY = invDet * (-planeY * spriteX + planeX * spriteY);
 
         if (transformY < 0) return;
 
         let spriteScreenX = ((canvas.width / 2) * (1 + transformX / transformY));
 
-        //calculate height of the sprite on screen
-        let spriteHeight = Math.abs((canvas.height / (transformY))); //using 'transformY' instead of the real distance prevents fisheye
-        //calculate lowest and highest pixel to fill in current stripe
-        let drawStartY = -spriteHeight / 2 + canvas.height / 2 + player.pitch;
+        let vMove = (this.z * 10) / transformY;
+        let spriteHeight = Math.abs((canvas.height / (transformY)));
+        let drawStartY = -spriteHeight / 2 + canvas.height / 2 + player.pitch + vMove;
 
-        //calculate width of the sprite
         let spriteWidth = (canvas.height / (transformY));
         let drawStartX = -spriteWidth / 2 + spriteScreenX;
         let drawEndX = drawStartX - spriteWidth * this.width / 2 + spriteWidth * this.width;
         for (let x = ~~(drawStartX - spriteWidth * this.width / 2); x < drawEndX; x++) {
             if (transformY > map.rayZBuffer[x]) continue;
-            c.fillStyle = "yellow"
-            c.fillRect(x, ~~(drawStartY - spriteHeight * this.height / 2), 1, ~~(spriteHeight * this.height))
+            let tmpX = (x - ~~(drawStartX - spriteWidth * this.width / 2)) / (~~drawEndX - ~~(drawStartX - spriteWidth * this.width / 2));
+
+            c.drawImageFromSpriteSheet(this.img, { x: x, y: ~~(drawStartY - spriteHeight * this.height / 2), w: 1, h: ~~(spriteHeight * this.height), cropX: ~~(tmpX * this.img.w), cropW: 1 })
         }
     }
 }
 class Light {
-    constructor(x, y, strength) {
+    constructor(x, y, strength, r = 255, g = 255, b = 255) {
         this.x = x;
         this.y = y;
         this.strength = strength;
+        this.r = r;
+        this.g = g;
+        this.b = b;
     }
 
     rayTrace(x, y, offset) {
@@ -117,14 +120,27 @@ class Light {
         let minDist = distance(x, y, this.x * CUBESIZE + CUBESIZE / 2 * specialCase, this.y * CUBESIZE + CUBESIZE / 2 * specialCase);
 
         if (minDist > this.strength * CUBESIZE) {
-            return 0;
+            return {
+                r: 0,
+                g: 0,
+                b: 0
+            }
         }
 
         let degree = fixAngle(angleFromPoints(x, y, this.x * CUBESIZE + CUBESIZE / 2 * specialCase, this.y * CUBESIZE + CUBESIZE / 2 * specialCase) + 0.0001);
         let ray = getRay({ x: x - Math.cos(degree) * offset, y: y - Math.sin(degree) * offset }, degree, this.strength, true)
 
+        let multiplier = ray.distance < minDist ? 0 : Math.max(0, this.strength * CUBESIZE - Math.min(ray.distance, minDist))
 
-        return ray.distance < minDist ? 0 : Math.max(0, this.strength * CUBESIZE - Math.min(ray.distance, minDist))
+        let r = multiplier / 255 * this.r
+        let g = multiplier / 255 * this.g
+        let b = multiplier / 255 * this.b
+
+        return {
+            r: r,
+            g: g,
+            b: b
+        }
     }
 }
 class Map {
@@ -141,9 +157,9 @@ class Map {
         let tmpMap = new MazeBuilder((MAPSIZE - 1) / 2, (MAPSIZE - 1) / 2).getMaze();
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
-                this.roof.push(Object.values(images.textures)[0])
-                this.wall.push(tmpMap[x][y] ? Object.values(images.textures)[0] : 0)
-                this.floor.push(Object.values(images.textures)[0])
+                this.roof.push(Object.values(images.textures)[1])
+                this.wall.push(tmpMap[x][y] ? Object.values(images.textures)[1] : 0)
+                this.floor.push(Object.values(images.textures)[1])
                 if (tmpMap[x][y] == 0 && Math.random() > LIGHTPROBABILITY) {
                     let tmp = false;
                     this.lights.forEach(light => {
@@ -154,19 +170,25 @@ class Map {
                     if (tmp) {
                         continue;
                     }
-                    this.lights.push(new Light(x, y, LIGHTSTRENGTH))
+                    this.lights.push(new Light(x, y, LIGHTSTRENGTH, 200, 200, 175))
+
+                    this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -200, 20, 20, images.textures.chandelier))
+
                 }
             }
         }
 
-        //this.sprites.push(new Sprite(150, 100, 0, 20, 20))
     }
     draw() {
         this.drawRay();
         this.drawSprites();
     }
     drawSprites() {
-        this.sprites.forEach(sprite => {
+        const FILTEREDSPRITES = this.sprites.filter(e => distance(player.x, player.y, e.x, e.y) < SPRITERENDERDISTANCE * CUBESIZE);
+
+        const SORTEDSPRITES = FILTEREDSPRITES.sort((a, b) => distance(a.x, a.y, player.x, player.y) - distance(b.y, b.y, player.x, player.y))
+
+        SORTEDSPRITES.forEach(sprite => {
             sprite.draw();
         })
     }
@@ -175,12 +197,12 @@ class Map {
         c.fillRect(MAPSIZE * CUBESIZE * EDITORSCALE, 0, MAPSIZE * CUBESIZE * EDITORSCALE, MAPSIZE * CUBESIZE * EDITORSCALE)
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
-                c.fillStyle = this.wall[x + y * MAPSIZE] == Object.values(images.textures)[0] ? "black" : "white";
+                c.fillStyle = this.wall[x + y * MAPSIZE] == Object.values(images.textures)[1] ? "black" : "white";
                 if (detectCollision(MAPSIZE * CUBESIZE * EDITORSCALE + x * CUBESIZE * EDITORSCALE + 1, y * CUBESIZE * EDITORSCALE + 1, CUBESIZE * EDITORSCALE - 2, CUBESIZE * EDITORSCALE - 2, mouse.x, mouse.y, 1, 1)) {
                     c.fillStyle = "gray"
                     if (mouse.down) {
                         mouse.down = false;
-                        this.wall[x + y * MAPSIZE] = this.wall[x + y * MAPSIZE] == Object.values(images.textures)[0] ? 0 : Object.values(images.textures)[0];
+                        this.wall[x + y * MAPSIZE] = this.wall[x + y * MAPSIZE] == Object.values(images.textures)[1] ? 0 : Object.values(images.textures)[1];
                     }
                 }
                 c.fillRect(MAPSIZE * CUBESIZE * EDITORSCALE + x * CUBESIZE * EDITORSCALE + 1, y * CUBESIZE * EDITORSCALE + 1, CUBESIZE * EDITORSCALE - 2, CUBESIZE * EDITORSCALE - 2)
@@ -246,12 +268,25 @@ class Map {
             const FLOOREDLINEOFFSET = ~~(lineOffset);
             const FLOOREDLINEWIDTH = ~~(lineWidth);
 
-            let light = AMBIENTLIGHT;
+            let light = {
+                r: AMBIENTLIGHT.r,
+                g: AMBIENTLIGHT.g,
+                b: AMBIENTLIGHT.b
+            };
+
             FILTEREDLIGHTS.forEach(lightSource => {
-                light += lightSource.rayTrace(ray.x, ray.y, 1)
+                let lighting = lightSource.rayTrace(ray.x, ray.y, 1);
+                light.r += lighting.r;
+                light.g += lighting.g;
+                light.b += lighting.b;
             })
-            if (light < -255) light = -255;
-            if (light > 0) light = 0;
+
+            if (light.r < -255) light.r = -255;
+            if (light.r > 0) light.r = 0;
+            if (light.g < -255) light.g = -255;
+            if (light.g > 0) light.g = 0;
+            if (light.b < -255) light.b = -255;
+            if (light.b > 0) light.b = 0;
 
             for (let y = 0; y < TEXTURESIZE; y++) {
                 let colStart = getWholeImageDataFromSpriteSheet(ray.tex, texX, y);
@@ -259,7 +294,7 @@ class Map {
                     for (let drawY = 0; drawY < CEILEDWALLPIXELHEIGHT; drawY++) {
                         let dataIndex = (lineX + drawX + (FLOOREDLINEOFFSET + ~~(WALLPIXELHEIGHT * y) + PITCH + drawY) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
-                            frameBuffer.data[dataIndex + i] = (i < 3 ? light : 0) + images.imageData.data[colStart + i];
+                            frameBuffer.data[dataIndex + i] = (i == 0 ? light.r : i == 1 ? light.g : i == 2 ? light.b : 0) + images.imageData.data[colStart + i];
                         }
                     }
                 }
@@ -277,25 +312,38 @@ class Map {
                 let texIndex = Math.min(~~(texX / TEXTURESIZE) + ~~(texY / TEXTURESIZE) * MAPSIZE, MAXMAPINDEX - 1);
                 let tex = this.floor[texIndex]
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
-                let light = AMBIENTLIGHT;
+
                 let texXToTexToCube = texX / TEXTURETOCUBE;
                 let texYToTexToCube = texY / TEXTURETOCUBE;
+                let light = {
+                    r: AMBIENTLIGHT.r,
+                    g: AMBIENTLIGHT.g,
+                    b: AMBIENTLIGHT.b
+                };
+
                 FILTEREDLIGHTS.forEach(lightSource => {
                     let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
-
                     if (minDist > lightSource.strength * CUBESIZE) {
                         return;
                     }
-                    light += lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1)
+                    let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1);
+                    if (!lighting) return;
+                    light.r += lighting.r;
+                    light.g += lighting.g;
+                    light.b += lighting.b;
                 })
-                if (light < -255) light = -255;
-                if (light > 0) light = 0;
+                if (light.r < -255) light.r = -255;
+                if (light.r > 0) light.r = 0;
+                if (light.g < -255) light.g = -255;
+                if (light.g > 0) light.g = 0;
+                if (light.b < -255) light.b = -255;
+                if (light.b > 0) light.b = 0;
 
                 for (let drawX = 0; drawX < FLOOREDLINEWIDTH; drawX++) {
                     for (let drawY = 0; drawY < SIDERES; drawY++) {
                         let dataIndex = (lineX + drawX + (y + drawY) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
-                            frameBuffer.data[dataIndex + i] = (i < 3 ? light : 0) + images.imageData.data[colStart + i];
+                            frameBuffer.data[dataIndex + i] = (i == 0 ? light.r : i == 1 ? light.g : i == 2 ? light.b : 0) + images.imageData.data[colStart + i];
                         }
                     }
                 }
@@ -313,24 +361,37 @@ class Map {
                 let texIndex = ~~(texX / TEXTURESIZE) + ~~(texY / TEXTURESIZE) * MAPSIZE
                 let tex = this.roof[texIndex]
                 let colStart = getWholeImageDataFromSpriteSheet(tex, texX % TEXTURESIZE, texY % TEXTURESIZE)
-                let light = AMBIENTLIGHT;
+
                 let texXToTexToCube = texX / TEXTURETOCUBE;
                 let texYToTexToCube = texY / TEXTURETOCUBE;
+                let light = {
+                    r: AMBIENTLIGHT.r,
+                    g: AMBIENTLIGHT.g,
+                    b: AMBIENTLIGHT.b
+                };
+
                 FILTEREDLIGHTS.forEach(lightSource => {
                     let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
-
                     if (minDist > lightSource.strength * CUBESIZE) {
                         return;
                     }
-                    light += lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1)
+                    let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1);
+                    if (!lighting) return;
+                    light.r += lighting.r;
+                    light.g += lighting.g;
+                    light.b += lighting.b;
                 })
-                if (light < -255) light = -255;
-                if (light > 0) light = 0;
+                if (light.r < -255) light.r = -255;
+                if (light.r > 0) light.r = 0;
+                if (light.g < -255) light.g = -255;
+                if (light.g > 0) light.g = 0;
+                if (light.b < -255) light.b = -255;
+                if (light.b > 0) light.b = 0;
                 for (let drawX = 0; drawX < FLOOREDLINEWIDTH; drawX++) {
                     for (let drawY = 0; drawY < SIDERES; drawY++) {
                         let dataIndex = (lineX + drawX + (y + drawY) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
-                            frameBuffer.data[dataIndex + i] = (i < 3 ? light : 0) + images.imageData.data[colStart + i];
+                            frameBuffer.data[dataIndex + i] = (i == 0 ? light.r : i == 1 ? light.g : i == 2 ? light.b : 0) + images.imageData.data[colStart + i];
                         }
                     }
                 }
@@ -360,7 +421,7 @@ class Player {
         this.deltaA = 0;
         this.deltaB = -1;
         this.pitch = 0;
-        this.flashLight = new Light(this.x, this.y, lightStrength);
+        this.flashLight = new Light(this.x, this.y, lightStrength, 100, 100, 85);
     }
     update() {
         if (pressedKeys['ArrowLeft']) {
@@ -467,7 +528,7 @@ function getHorizontalRay(from, angle, maxdof = MAXDOF, ignoreTex = false) {
             dof++;
         };
     }
-    return { x: rayX, y: rayY, side: 0, tex: ignoreTex ? undefined : map.wall[mapIndex] || Object.values(images.textures)[0], dof: dof, maxed: maxed }
+    return { x: rayX, y: rayY, side: 0, tex: ignoreTex ? undefined : map.wall[mapIndex] || Object.values(images.textures)[1], dof: dof, maxed: maxed }
 
 }
 
@@ -503,7 +564,7 @@ function getVerticalRay(from, angle, maxdof = MAXDOF, ignoreTex = false) {
             dof++;
         };
     }
-    return { x: rayX, y: rayY, side: 1, tex: ignoreTex ? undefined : map.wall[mapIndex] || Object.values(images.textures)[0], dof: dof, maxed: maxed }
+    return { x: rayX, y: rayY, side: 1, tex: ignoreTex ? undefined : map.wall[mapIndex] || Object.values(images.textures)[1], dof: dof, maxed: maxed }
 
 }
 
