@@ -424,22 +424,7 @@ class Player {
         this.flashLight = new Light(this.x, this.y, lightStrength, 100, 100, 85);
     }
     update() {
-        if (pressedKeys['ArrowLeft']) {
-            this.angle -= 0.02 * deltaTime;
-            if (this.angle < 0) { this.angle += 2 * Math.PI }
-            this.deltaX = Math.cos(this.angle);
-            this.deltaY = Math.sin(this.angle);
-            this.deltaA = Math.cos(fixAngle(this.angle - Math.PI / 2));
-            this.deltaB = Math.sin(fixAngle(this.angle - Math.PI / 2));
-        }
-        if (pressedKeys['ArrowRight']) {
-            this.angle += 0.02 * deltaTime;
-            if (this.angle > 2 * Math.PI) { this.angle -= 2 * Math.PI }
-            this.deltaX = Math.cos(this.angle);
-            this.deltaY = Math.sin(this.angle);
-            this.deltaA = Math.cos(fixAngle(this.angle - Math.PI / 2));
-            this.deltaB = Math.sin(fixAngle(this.angle - Math.PI / 2));
-        }
+
         if (pressedKeys['KeyW']) {
             if (!map.wall[~~((this.x + this.deltaX * deltaTime * 10) / CUBESIZE) + ~~((this.y + this.deltaY * deltaTime * 10) / CUBESIZE) * MAPSIZE]) {
                 this.x += this.deltaX * deltaTime;
@@ -464,17 +449,20 @@ class Player {
                 this.y += this.deltaB * deltaTime;
             }
         }
-        if (pressedKeys['ArrowUp']) {
-            this.pitch += RENDERSCALE / 4 * deltaTime;
-            this.pitch = this.pitch.clamp(-RENDERSCALE * 12, RENDERSCALE * 12)
-        }
-        if (pressedKeys['ArrowDown']) {
-            this.pitch -= RENDERSCALE / 4 * deltaTime;
-            this.pitch = this.pitch.clamp(-RENDERSCALE * 12, RENDERSCALE * 12)
-        }
+
         this.draw();
         this.flashLight.x = this.x / CUBESIZE;
         this.flashLight.y = this.y / CUBESIZE;
+    }
+    cameraMove(x, y) {
+        this.angle += 0.02 * x * deltaTime;
+        this.angle = fixAngle(this.angle)
+        this.deltaX = Math.cos(this.angle);
+        this.deltaY = Math.sin(this.angle);
+        this.deltaA = Math.cos(fixAngle(this.angle - Math.PI / 2));
+        this.deltaB = Math.sin(fixAngle(this.angle - Math.PI / 2));
+        this.pitch -= RENDERSCALE / 4 * deltaTime * y;
+        this.pitch = this.pitch.clamp(-RENDERSCALE * 12, RENDERSCALE * 12)
     }
     draw() {
         //c.fillRect(this.x - 2, this.y - 2, 4, 4)

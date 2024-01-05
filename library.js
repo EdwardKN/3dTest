@@ -26,6 +26,7 @@ window.addEventListener("resize", fixCanvas);
 //document.addEventListener('contextmenu', event => event.preventDefault());
 
 renderCanvas.addEventListener("mousemove", function (e) {
+
     let oldDown = mouse.down;
     let oldWhich = mouse.which;
     let oldUp = mouse.up;
@@ -36,6 +37,7 @@ renderCanvas.addEventListener("mousemove", function (e) {
         which: oldWhich,
         up: oldUp
     };
+    player.cameraMove(e.movementX / scale, e.movementY / scale)
 });
 
 var mouse = {
@@ -48,6 +50,8 @@ renderCanvas.addEventListener("mousedown", function (e) {
     mouse.down = true;
     mouse.up = false;
     mouse.which = e.which;
+    renderCanvas.requestPointerLock();
+
 });
 renderCanvas.addEventListener("mouseup", function (e) {
     mouse.down = false;
