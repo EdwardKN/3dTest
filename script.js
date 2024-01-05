@@ -90,7 +90,7 @@ class Sprite {
 
         let vMove = (this.z * 10) / transformY;
         let spriteHeight = Math.abs((canvas.height / (transformY)));
-        let drawStartY = -spriteHeight / 2 + canvas.height / 2 + player.pitch + vMove;
+        let drawStartY = -spriteHeight / 2 + canvas.height / 2 + player.pitch + vMove + player.z / distance(this.x, this.y, player.x, player.y);
 
         let spriteWidth = (canvas.height / (transformY));
         let drawStartX = -spriteWidth / 2 + spriteScreenX;
@@ -237,6 +237,7 @@ class Map {
         const DRAWHEIGHT = canvas.height;
         const DRAWWIDTH = canvas.width;
         const PITCH = ~~(player.pitch);
+        const POSZ = ~~(player.z);
 
         const FILTEREDLIGHTS = this.lights.filter(e => distance(player.x, player.y, e.x * CUBESIZE, e.y * CUBESIZE) < e.strength * CUBESIZE * LIGHTRENDERDISTANCE);
         let floorLight;
@@ -296,7 +297,7 @@ class Map {
                 let colStart = getWholeImageDataFromSpriteSheet(ray.tex, texX, y);
                 for (let drawX = 0; drawX < lineWidth; drawX++) {
                     for (let drawY = 0; drawY < CEILEDWALLPIXELHEIGHT; drawY++) {
-                        let dataIndex = (lineX + drawX + (FLOOREDLINEOFFSET + ~~(WALLPIXELHEIGHT * y) + PITCH + drawY) * DRAWWIDTH) * 4
+                        let dataIndex = (lineX + drawX + (FLOOREDLINEOFFSET + ~~(WALLPIXELHEIGHT * y) + PITCH + drawY + ~~(POSZ / ray.distance)) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
                             frameBuffer.data[dataIndex + i] = (i == 0 ? wallLight.r : i == 1 ? wallLight.g : i == 2 ? wallLight.b : 0) + images.imageData.data[colStart + i];
                         }
@@ -304,10 +305,10 @@ class Map {
                 }
             }
             const FLOORROOFMULTIPLIER = (256 / 58 * RENDERSCALE) * HEIGHTTOWIDTH * TEXTURETOCUBE / raFix;
-            let upper = ~~(lineOffset + lineHeight + PITCH)
+            let upper = ~~(lineOffset + lineHeight + PITCH) + ~~(POSZ / ray.distance)
             for (let y = upper; y < DRAWHEIGHT; y += SIDERES) {
                 let dy = y - DRAWHEIGHT / 2 - PITCH
-                let multiplier = FLOORROOFMULTIPLIER / dy;
+                let multiplier = (FLOORROOFMULTIPLIER + (POSZ / raFix * 4)) / dy;
                 let tmpX = Math.cos(newAngle) * multiplier;
                 let tmpY = Math.sin(newAngle) * multiplier;
                 let texX = Math.abs(~~(player.x * (TEXTURETOCUBE) + tmpX));
@@ -355,11 +356,11 @@ class Map {
                     }
                 }
             }
-            upper = lineOffset + PITCH;
+            upper = lineOffset + PITCH + (POSZ / ray.distance);
             for (let y = 0; y < upper; y += SIDERES) {
 
                 let dy = y - DRAWHEIGHT / 2 - PITCH
-                let multiplier = FLOORROOFMULTIPLIER / dy;
+                let multiplier = (FLOORROOFMULTIPLIER - (POSZ / raFix * 4)) / dy;
                 let tmpX = Math.cos(newAngle) * multiplier;
                 let tmpY = Math.sin(newAngle) * multiplier;
                 let texX = Math.abs(~~(-player.x * (TEXTURETOCUBE) + tmpX));
@@ -425,6 +426,7 @@ class Player {
     constructor(x, y, lightStrength) {
         this.x = x;
         this.y = y;
+        this.z = 0;
         this.angle = 0.001;
         this.deltaX = 1;
         this.deltaY = 0;
@@ -432,13 +434,18 @@ class Player {
         this.deltaB = -1;
         this.pitch = 0;
         this.flashLight = new Light(this.x, this.y, lightStrength, 100, 100, 85);
+
+        this.jumpPower = 0;
+        this.standardJumpPower = 300;
+        this.jumpLooseAmount = 20;
+        this.jumping = false;
     }
     update() {
 
         if (pressedKeys['KeyW']) {
             if (!map.wall[~~((this.x + this.deltaX * deltaTime * 10) / CUBESIZE) + ~~((this.y + this.deltaY * deltaTime * 10) / CUBESIZE) * MAPSIZE]) {
-                this.x += this.deltaX * deltaTime;
-                this.y += this.deltaY * deltaTime;
+                this.x += this.deltaX * deltaTime * (pressedKeys['ShiftLeft'] ? 1.5 : 1);
+                this.y += this.deltaY * deltaTime * (pressedKeys['ShiftLeft'] ? 1.5 : 1);
             }
         }
         if (pressedKeys['KeyS']) {
@@ -459,10 +466,25 @@ class Player {
                 this.y += this.deltaB * deltaTime;
             }
         }
-
+        if (pressedKeys['Space'] && !this.jumping) {
+            this.jumping = true;
+            this.jumpPower = this.standardJumpPower;
+        }
+        if (this.jumping) {
+            this.animateJump();
+        }
         this.draw();
         this.flashLight.x = this.x / CUBESIZE;
         this.flashLight.y = this.y / CUBESIZE;
+    }
+    animateJump() {
+        this.z += this.jumpPower;
+        this.jumpPower -= this.jumpLooseAmount;
+
+        if (this.z < 0) {
+            this.z = 0;
+            this.jumping = false;
+        }
     }
     cameraMove(x, y) {
         this.angle += 0.02 * x * deltaTime;
