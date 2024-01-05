@@ -24,6 +24,7 @@ const LIGHTRENDERDISTANCE = 4;
 const MAXDOF = 50;
 const RAYAMOUNT = canvas.width;
 const SIDERES = 1;
+const LIGHTRES = 2;
 
 // Constants of constants
 const MAXDIST = MAXDOF * CUBESIZE;
@@ -238,6 +239,9 @@ class Map {
         const PITCH = ~~(player.pitch);
 
         const FILTEREDLIGHTS = this.lights.filter(e => distance(player.x, player.y, e.x * CUBESIZE, e.y * CUBESIZE) < e.strength * CUBESIZE * LIGHTRENDERDISTANCE);
+        let floorLight;
+        let wallLight;
+        let roofLight;
 
         for (let index = 0; index < RAYAMOUNT; index++) {
             let angle = (player.angle - FOV / 2) + index * FOV / RAYAMOUNT;
@@ -268,7 +272,7 @@ class Map {
             const FLOOREDLINEOFFSET = ~~(lineOffset);
             const FLOOREDLINEWIDTH = ~~(lineWidth);
 
-            let light = {
+            wallLight = {
                 r: AMBIENTLIGHT.r,
                 g: AMBIENTLIGHT.g,
                 b: AMBIENTLIGHT.b
@@ -276,17 +280,17 @@ class Map {
 
             FILTEREDLIGHTS.forEach(lightSource => {
                 let lighting = lightSource.rayTrace(ray.x, ray.y, 1);
-                light.r += lighting.r;
-                light.g += lighting.g;
-                light.b += lighting.b;
+                wallLight.r += lighting.r;
+                wallLight.g += lighting.g;
+                wallLight.b += lighting.b;
             })
 
-            if (light.r < -255) light.r = -255;
-            if (light.r > 0) light.r = 0;
-            if (light.g < -255) light.g = -255;
-            if (light.g > 0) light.g = 0;
-            if (light.b < -255) light.b = -255;
-            if (light.b > 0) light.b = 0;
+            if (wallLight.r < -255) wallLight.r = -255;
+            if (wallLight.r > 0) wallLight.r = 0;
+            if (wallLight.g < -255) wallLight.g = -255;
+            if (wallLight.g > 0) wallLight.g = 0;
+            if (wallLight.b < -255) wallLight.b = -255;
+            if (wallLight.b > 0) wallLight.b = 0;
 
             for (let y = 0; y < TEXTURESIZE; y++) {
                 let colStart = getWholeImageDataFromSpriteSheet(ray.tex, texX, y);
@@ -294,7 +298,7 @@ class Map {
                     for (let drawY = 0; drawY < CEILEDWALLPIXELHEIGHT; drawY++) {
                         let dataIndex = (lineX + drawX + (FLOOREDLINEOFFSET + ~~(WALLPIXELHEIGHT * y) + PITCH + drawY) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
-                            frameBuffer.data[dataIndex + i] = (i == 0 ? light.r : i == 1 ? light.g : i == 2 ? light.b : 0) + images.imageData.data[colStart + i];
+                            frameBuffer.data[dataIndex + i] = (i == 0 ? wallLight.r : i == 1 ? wallLight.g : i == 2 ? wallLight.b : 0) + images.imageData.data[colStart + i];
                         }
                     }
                 }
@@ -315,35 +319,38 @@ class Map {
 
                 let texXToTexToCube = texX / TEXTURETOCUBE;
                 let texYToTexToCube = texY / TEXTURETOCUBE;
-                let light = {
-                    r: AMBIENTLIGHT.r,
-                    g: AMBIENTLIGHT.g,
-                    b: AMBIENTLIGHT.b
-                };
+                if (Math.abs(y % LIGHTRES) == Math.abs(upper % LIGHTRES)) {
+                    floorLight = {
+                        r: AMBIENTLIGHT.r,
+                        g: AMBIENTLIGHT.g,
+                        b: AMBIENTLIGHT.b
+                    };
 
-                FILTEREDLIGHTS.forEach(lightSource => {
-                    let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
-                    if (minDist > lightSource.strength * CUBESIZE) {
-                        return;
-                    }
-                    let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1);
-                    if (!lighting) return;
-                    light.r += lighting.r;
-                    light.g += lighting.g;
-                    light.b += lighting.b;
-                })
-                if (light.r < -255) light.r = -255;
-                if (light.r > 0) light.r = 0;
-                if (light.g < -255) light.g = -255;
-                if (light.g > 0) light.g = 0;
-                if (light.b < -255) light.b = -255;
-                if (light.b > 0) light.b = 0;
+                    FILTEREDLIGHTS.forEach(lightSource => {
+                        let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
+                        if (minDist > lightSource.strength * CUBESIZE) {
+                            return;
+                        }
+                        let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1);
+                        if (!lighting) return;
+                        floorLight.r += lighting.r;
+                        floorLight.g += lighting.g;
+                        floorLight.b += lighting.b;
+                    })
+                    if (floorLight.r < -255) floorLight.r = -255;
+                    if (floorLight.r > 0) floorLight.r = 0;
+                    if (floorLight.g < -255) floorLight.g = -255;
+                    if (floorLight.g > 0) floorLight.g = 0;
+                    if (floorLight.b < -255) floorLight.b = -255;
+                    if (floorLight.b > 0) floorLight.b = 0;
+                }
+
 
                 for (let drawX = 0; drawX < FLOOREDLINEWIDTH; drawX++) {
                     for (let drawY = 0; drawY < SIDERES; drawY++) {
                         let dataIndex = (lineX + drawX + (y + drawY) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
-                            frameBuffer.data[dataIndex + i] = (i == 0 ? light.r : i == 1 ? light.g : i == 2 ? light.b : 0) + images.imageData.data[colStart + i];
+                            frameBuffer.data[dataIndex + i] = (i == 0 ? floorLight.r : i == 1 ? floorLight.g : i == 2 ? floorLight.b : 0) + images.imageData.data[colStart + i];
                         }
                     }
                 }
@@ -364,34 +371,37 @@ class Map {
 
                 let texXToTexToCube = texX / TEXTURETOCUBE;
                 let texYToTexToCube = texY / TEXTURETOCUBE;
-                let light = {
-                    r: AMBIENTLIGHT.r,
-                    g: AMBIENTLIGHT.g,
-                    b: AMBIENTLIGHT.b
-                };
 
-                FILTEREDLIGHTS.forEach(lightSource => {
-                    let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
-                    if (minDist > lightSource.strength * CUBESIZE) {
-                        return;
-                    }
-                    let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1);
-                    if (!lighting) return;
-                    light.r += lighting.r;
-                    light.g += lighting.g;
-                    light.b += lighting.b;
-                })
-                if (light.r < -255) light.r = -255;
-                if (light.r > 0) light.r = 0;
-                if (light.g < -255) light.g = -255;
-                if (light.g > 0) light.g = 0;
-                if (light.b < -255) light.b = -255;
-                if (light.b > 0) light.b = 0;
+                if (Math.abs(y % LIGHTRES) == 0) {
+                    roofLight = {
+                        r: AMBIENTLIGHT.r,
+                        g: AMBIENTLIGHT.g,
+                        b: AMBIENTLIGHT.b
+                    };
+
+                    FILTEREDLIGHTS.forEach(lightSource => {
+                        let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
+                        if (minDist > lightSource.strength * CUBESIZE) {
+                            return;
+                        }
+                        let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1);
+                        if (!lighting) return;
+                        roofLight.r += lighting.r;
+                        roofLight.g += lighting.g;
+                        roofLight.b += lighting.b;
+                    })
+                    if (roofLight.r < -255) roofLight.r = -255;
+                    if (roofLight.r > 0) roofLight.r = 0;
+                    if (roofLight.g < -255) roofLight.g = -255;
+                    if (roofLight.g > 0) roofLight.g = 0;
+                    if (roofLight.b < -255) roofLight.b = -255;
+                    if (roofLight.b > 0) roofLight.b = 0;
+                }
                 for (let drawX = 0; drawX < FLOOREDLINEWIDTH; drawX++) {
                     for (let drawY = 0; drawY < SIDERES; drawY++) {
                         let dataIndex = (lineX + drawX + (y + drawY) * DRAWWIDTH) * 4
                         for (let i = 0; i < 4; i++) {
-                            frameBuffer.data[dataIndex + i] = (i == 0 ? light.r : i == 1 ? light.g : i == 2 ? light.b : 0) + images.imageData.data[colStart + i];
+                            frameBuffer.data[dataIndex + i] = (i == 0 ? roofLight.r : i == 1 ? roofLight.g : i == 2 ? roofLight.b : 0) + images.imageData.data[colStart + i];
                         }
                     }
                 }
