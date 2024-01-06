@@ -37,7 +37,7 @@ renderCanvas.addEventListener("mousemove", function (e) {
         which: oldWhich,
         up: oldUp
     };
-    //player.cameraMove(e.movementX / scale, e.movementY / scale)
+    player.cameraMove(e.movementX / scale, e.movementY / scale)
 });
 
 var mouse = {
@@ -50,7 +50,7 @@ renderCanvas.addEventListener("mousedown", function (e) {
     mouse.down = true;
     mouse.up = false;
     mouse.which = e.which;
-    //renderCanvas.requestPointerLock();
+    renderCanvas.requestPointerLock();
 
 });
 renderCanvas.addEventListener("mouseup", function (e) {

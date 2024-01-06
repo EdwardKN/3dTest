@@ -97,7 +97,7 @@ class Sprite {
 
         let vMove = (this.z * 10) / transformY;
         let spriteHeight = Math.abs((canvas.height / (transformY)));
-        let drawStartY = -spriteHeight / 2 + canvas.height / 2 + player.pitch + vMove + player.z / distance(this.x, this.y, player.x, player.y);
+        let drawStartY = -spriteHeight / 2 + canvas.height / 2 + player.pitch + vMove + (player.z + Math.cos(player.moveAnim) * player.walkingbob) / distance(this.x, this.y, player.x, player.y);
 
         let spriteWidth = (canvas.height / (transformY));
         let drawStartX = -spriteWidth / 2 + spriteScreenX;
@@ -244,7 +244,7 @@ class Map {
         const DRAWHEIGHT = canvas.height;
         const DRAWWIDTH = canvas.width;
         const PITCH = ~~(player.pitch);
-        const POSZ = ~~(player.z);
+        const POSZ = ~~(player.z + Math.cos(player.moveAnim) * player.walkingbob);
 
         const FILTEREDLIGHTS = this.lights.filter(e => distance(player.x, player.y, e.x * CUBESIZE, e.y * CUBESIZE) < e.strength * CUBESIZE * LIGHTRENDERDISTANCE);
         let floorLight;
@@ -419,7 +419,7 @@ class Map {
         //Mapeditor
 
         //this.drawLightEditor()
-        this.drawMapEditor()
+        //this.drawMapEditor()
 
         /*c.globalAlpha = 0.03;
         rays.forEach(ray => {
@@ -441,6 +441,10 @@ class Player {
         this.deltaB = -1;
         this.pitch = 0;
         this.flashLight = new Light(this.x, this.y, lightStrength, 100, 100, 85);
+
+        this.moveAnim = 0;
+        this.moveFrequency = 0.2;
+        this.walkingbob = 200;
 
         this.jumpPower = 0;
         this.standardJumpPower = 300;
@@ -476,8 +480,13 @@ class Player {
         if (pressedKeys['Space'] && !this.jumping) {
             this.jumping = true;
             this.jumpPower = this.standardJumpPower;
+            this.moveAnim = 0;
         }
-        if (pressedKeys['ArrowRight']) {
+
+        if (!this.jumping && (pressedKeys['KeyW'] || pressedKeys['KeyS'] || pressedKeys['KeyA'] || pressedKeys['KeyD'])) {
+            this.moveAnim += deltaTime * this.moveFrequency * (pressedKeys['ShiftLeft'] ? 1.5 : 1);
+        }
+        /*if (pressedKeys['ArrowRight']) {
             this.cameraMove(1, 0)
         }
         if (pressedKeys['ArrowLeft']) {
@@ -488,7 +497,7 @@ class Player {
         }
         if (pressedKeys['ArrowDown']) {
             this.cameraMove(0, 1)
-        }
+        }*/
         if (this.jumping) {
             this.animateJump();
         }
