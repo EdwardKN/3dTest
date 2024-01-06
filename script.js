@@ -506,8 +506,8 @@ class Player {
         this.flashLight.y = this.y / CUBESIZE;
     }
     animateJump() {
-        this.z += this.jumpPower;
-        this.jumpPower -= this.jumpLooseAmount;
+        this.z += this.jumpPower * deltaTime;
+        this.jumpPower -= this.jumpLooseAmount * deltaTime;
 
         if (this.z < 0) {
             this.z = 0;
