@@ -525,8 +525,8 @@ class Player {
         this.pitch = this.pitch.clamp(-RENDERSCALE * 12, RENDERSCALE * 12)
     }
     draw() {
-        c.fillStyle = "yellow"
-        c.fillRect((this.x - 2) * EDITORSCALE, (this.y - 2) * EDITORSCALE, 1, 1)
+        //c.fillStyle = "yellow"
+        //c.fillRect((this.x - 2) * EDITORSCALE, (this.y - 2) * EDITORSCALE, 1, 1)
         //c.drawLine({ from: { x: canvas.width / 2, y: canvas.height / 2 }, to: { x: (canvas.width / 2 + this.deltaX * 20), y: (canvas.height / 2 + this.deltaY * 20) }, color: "yellow" })
     }
 }
