@@ -1,7 +1,7 @@
 var map = undefined;
 
 //MAP
-const MAPSIZE = 256;
+const MAPSIZE = 16;
 const CUBESIZE = 32;
 const LIGHTFREQUENCY = 3
 const LIGHTPROBABILITY = 0.7;
@@ -61,6 +61,13 @@ function update() {
 
     renderC.drawImage(canvas, 0, 0, renderCanvas.width, renderCanvas.height);
 
+}
+class Wall {
+    constructor(img, thickness = CUBESIZE, dir = 1) {
+        this.img = img;
+        this.thickness = thickness;
+        this.dir = dir;
+    }
 }
 class Sprite {
     constructor(x, y, z, width, height, img) {
@@ -159,7 +166,7 @@ class Map {
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
                 this.roof.push(Object.values(images.textures)[1])
-                this.wall.push(tmpMap[x][y] ? Object.values(images.textures)[1] : 0)
+                this.wall.push(tmpMap[x][y] ? new Wall(images.textures.brick) : 0)
                 this.floor.push(Object.values(images.textures)[1])
                 if (tmpMap[x][y] == 0 && Math.random() > LIGHTPROBABILITY) {
                     let tmp = false;
@@ -195,18 +202,18 @@ class Map {
     }
     drawMapEditor() {
         c.fillStyle = "red"
-        c.fillRect(MAPSIZE * CUBESIZE * EDITORSCALE, 0, MAPSIZE * CUBESIZE * EDITORSCALE, MAPSIZE * CUBESIZE * EDITORSCALE)
+        c.fillRect(0, 0, MAPSIZE * CUBESIZE * EDITORSCALE, MAPSIZE * CUBESIZE * EDITORSCALE)
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
-                c.fillStyle = this.wall[x + y * MAPSIZE] == Object.values(images.textures)[1] ? "black" : "white";
-                if (detectCollision(MAPSIZE * CUBESIZE * EDITORSCALE + x * CUBESIZE * EDITORSCALE + 1, y * CUBESIZE * EDITORSCALE + 1, CUBESIZE * EDITORSCALE - 2, CUBESIZE * EDITORSCALE - 2, mouse.x, mouse.y, 1, 1)) {
+                c.fillStyle = this.wall[x + y * MAPSIZE] instanceof Wall ? "black" : "white";
+                if (detectCollision(x * CUBESIZE * EDITORSCALE + 1, y * CUBESIZE * EDITORSCALE + 1, CUBESIZE * EDITORSCALE - 2, CUBESIZE * EDITORSCALE - 2, mouse.x, mouse.y, 1, 1)) {
                     c.fillStyle = "gray"
                     if (mouse.down) {
                         mouse.down = false;
-                        this.wall[x + y * MAPSIZE] = this.wall[x + y * MAPSIZE] == Object.values(images.textures)[1] ? 0 : Object.values(images.textures)[1];
+                        this.wall[x + y * MAPSIZE] = this.wall[x + y * MAPSIZE] instanceof Wall ? 0 : new Wall(images.textures.brick, 16, 1);
                     }
                 }
-                c.fillRect(MAPSIZE * CUBESIZE * EDITORSCALE + x * CUBESIZE * EDITORSCALE + 1, y * CUBESIZE * EDITORSCALE + 1, CUBESIZE * EDITORSCALE - 2, CUBESIZE * EDITORSCALE - 2)
+                c.fillRect(x * CUBESIZE * EDITORSCALE + 1, y * CUBESIZE * EDITORSCALE + 1, CUBESIZE * EDITORSCALE - 2, CUBESIZE * EDITORSCALE - 2)
             }
         }
     }
@@ -412,13 +419,13 @@ class Map {
         //Mapeditor
 
         //this.drawLightEditor()
-        //this.drawMapEditor()
+        this.drawMapEditor()
 
         /*c.globalAlpha = 0.03;
         rays.forEach(ray => {
-            c.drawLine({ from: { x: player.x * EDITORSCALE, y: player.y * EDITORSCALE }, to: { x: ray.x * EDITORSCALE, y: ray.y * EDITORSCALE, color: "black" }, lineWidth: 1 })
+            c.drawLine({ from: { x: player.x * EDITORSCALE * 8, y: player.y * EDITORSCALE * 8 }, to: { x: ray.x * EDITORSCALE * 8, y: ray.y * EDITORSCALE * 8, color: "black" }, lineWidth: 1 })
         })
-        c.globalAlpha = 1;*/
+         c.globalAlpha = 1;*/
     }
 }
 
@@ -470,6 +477,18 @@ class Player {
             this.jumping = true;
             this.jumpPower = this.standardJumpPower;
         }
+        if (pressedKeys['ArrowRight']) {
+            this.cameraMove(1, 0)
+        }
+        if (pressedKeys['ArrowLeft']) {
+            this.cameraMove(-1, 0)
+        }
+        if (pressedKeys['ArrowUp']) {
+            this.cameraMove(0, -1)
+        }
+        if (pressedKeys['ArrowDown']) {
+            this.cameraMove(0, 1)
+        }
         if (this.jumping) {
             this.animateJump();
         }
@@ -497,7 +516,8 @@ class Player {
         this.pitch = this.pitch.clamp(-RENDERSCALE * 12, RENDERSCALE * 12)
     }
     draw() {
-        //c.fillRect(this.x - 2, this.y - 2, 4, 4)
+        c.fillStyle = "yellow"
+        c.fillRect((this.x - 2) * EDITORSCALE, (this.y - 2) * EDITORSCALE, 1, 1)
         //c.drawLine({ from: { x: canvas.width / 2, y: canvas.height / 2 }, to: { x: (canvas.width / 2 + this.deltaX * 20), y: (canvas.height / 2 + this.deltaY * 20) }, color: "yellow" })
     }
 }
@@ -518,6 +538,7 @@ function getRay(from, angle, maxdof = MAXDOF, ignoreTex = false) {
 
 function getHorizontalRay(from, angle, maxdof = MAXDOF, ignoreTex = false) {
     let rayX, rayY, rayOffseyX, rayOffseyY, dof = 0, mapX, mapY, mapIndex, maxed;
+    let sign = angle < Math.PI ? 1 : -1
     let aTan = -1 / Math.tan(angle)
     if (angle > Math.PI) {
         rayY = ~~(from.y / CUBESIZE) * CUBESIZE - 0.0001;
@@ -541,19 +562,31 @@ function getHorizontalRay(from, angle, maxdof = MAXDOF, ignoreTex = false) {
         mapY = ~~(rayY / CUBESIZE)
         mapIndex = mapX + mapY * MAPSIZE;
         if (mapIndex >= 0 && mapIndex < MAXMAPINDEX && map.wall[mapIndex] !== 0) {
-            maxed = true
+            if (map.wall[mapIndex].thickness === CUBESIZE) {
+                maxed = true
+            } else if (~~((rayX + sign * (CUBESIZE / 2 - (map.wall[mapIndex].dir == 1 ? map.wall[mapIndex].thickness : CUBESIZE) / 2)) / CUBESIZE) == mapX &&
+                ~~((rayY + sign * (CUBESIZE / 2 - (map.wall[mapIndex].dir == -1 ? map.wall[mapIndex].thickness : CUBESIZE) / 2)) / CUBESIZE) == mapY) {
+                maxed = true
+                rayX += rayOffseyX / (CUBESIZE / (CUBESIZE / 2 - map.wall[mapIndex].thickness / 2))
+                rayY += rayOffseyY / (CUBESIZE / (CUBESIZE / 2 - map.wall[mapIndex].thickness / 2))
+            } else {
+                rayX += rayOffseyX;
+                rayY += rayOffseyY;
+                dof++;
+            }
         } else {
             rayX += rayOffseyX;
             rayY += rayOffseyY;
             dof++;
         };
     }
-    return { x: rayX, y: rayY, side: 0, tex: ignoreTex ? undefined : map.wall[mapIndex] || Object.values(images.textures)[1], dof: dof, maxed: maxed }
+    return { x: rayX, y: rayY, side: 0, tex: ignoreTex ? undefined : map.wall[mapIndex]?.img || Object.values(images.textures)[1], dof: dof, maxed: maxed }
 
 }
 
 function getVerticalRay(from, angle, maxdof = MAXDOF, ignoreTex = false) {
     let rayX, rayY, rayOffseyX, rayOffseyY, dof = 0, mapX, mapY, mapIndex, maxed;
+    let sign = (angle < Math.PI / 2 || angle > Math.PI * 3 / 2) ? 1 : -1
     let nTan = -Math.tan(angle)
     if (angle > Math.PI / 2 && angle < Math.PI * 3 / 2) {
         rayX = ~~(from.x / CUBESIZE) * CUBESIZE - 0.0001;
@@ -577,14 +610,25 @@ function getVerticalRay(from, angle, maxdof = MAXDOF, ignoreTex = false) {
         mapY = ~~(rayY / CUBESIZE)
         mapIndex = mapX + mapY * MAPSIZE;
         if (mapIndex >= 0 && mapIndex < MAXMAPINDEX && map.wall[mapIndex] !== 0) {
-            maxed = true
+            if (map.wall[mapIndex].thickness === CUBESIZE) {
+                maxed = true
+            } else if (~~((rayX + sign * (CUBESIZE / 2 - (map.wall[mapIndex].dir == 1 ? map.wall[mapIndex].thickness : CUBESIZE) / 2)) / CUBESIZE) == mapX &&
+                ~~((rayY + sign * (CUBESIZE / 2 - (map.wall[mapIndex].dir == -1 ? map.wall[mapIndex].thickness : CUBESIZE) / 2)) / CUBESIZE) == mapY) {
+                maxed = true
+                rayX += rayOffseyX / (CUBESIZE / (CUBESIZE / 2 - map.wall[mapIndex].thickness / 2))
+                rayY += rayOffseyY / (CUBESIZE / (CUBESIZE / 2 - map.wall[mapIndex].thickness / 2))
+            } else {
+                rayX += rayOffseyX;
+                rayY += rayOffseyY;
+                dof++;
+            }
         } else {
             rayX += rayOffseyX;
             rayY += rayOffseyY;
             dof++;
         };
     }
-    return { x: rayX, y: rayY, side: 1, tex: ignoreTex ? undefined : map.wall[mapIndex] || Object.values(images.textures)[1], dof: dof, maxed: maxed }
+    return { x: rayX, y: rayY, side: 1, tex: ignoreTex ? undefined : map.wall[mapIndex]?.img || Object.values(images.textures)[1], dof: dof, maxed: maxed }
 
 }
 
