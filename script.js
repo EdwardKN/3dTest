@@ -180,7 +180,7 @@ class Map {
                     }
                     this.lights.push(new Light(x, y, LIGHTSTRENGTH, 200, 200, 175))
 
-                    this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -200, 20, 20, images.textures.chandelier))
+                    this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -400, 20, 20, images.textures.chandelier))
 
                 }
             }
@@ -247,9 +247,21 @@ class Map {
         const POSZ = ~~(player.z + Math.cos(player.moveAnim) * player.walkingbob);
 
         const FILTEREDLIGHTS = this.lights.filter(e => distance(player.x, player.y, e.x * CUBESIZE, e.y * CUBESIZE) < e.strength * CUBESIZE * LIGHTRENDERDISTANCE);
-        let floorLight;
-        let wallLight;
-        let roofLight;
+        let floorLight = {
+            r: AMBIENTLIGHT.r,
+            g: AMBIENTLIGHT.g,
+            b: AMBIENTLIGHT.b,
+            first: true
+        };
+
+        let roofLight = {
+            r: AMBIENTLIGHT.r,
+            g: AMBIENTLIGHT.g,
+            b: AMBIENTLIGHT.b,
+            first: true
+        };
+        let floorLightList = [];
+        let roofLightList = [];
 
         for (let index = 0; index < RAYAMOUNT; index++) {
             let angle = (player.angle - FOV / 2) + index * FOV / RAYAMOUNT;
@@ -280,11 +292,12 @@ class Map {
             const FLOOREDLINEOFFSET = ~~(lineOffset);
             const FLOOREDLINEWIDTH = ~~(lineWidth);
 
-            wallLight = {
+            let wallLight = {
                 r: AMBIENTLIGHT.r,
                 g: AMBIENTLIGHT.g,
                 b: AMBIENTLIGHT.b
             };
+
 
             FILTEREDLIGHTS.forEach(lightSource => {
                 let lighting = lightSource.rayTrace(ray.x, ray.y, 1);
@@ -327,7 +340,12 @@ class Map {
 
                 let texXToTexToCube = texX / TEXTURETOCUBE;
                 let texYToTexToCube = texY / TEXTURETOCUBE;
-                if (Math.abs(y % LIGHTRES) == Math.abs(upper % LIGHTRES)) {
+
+                let lightX = ~~(texX / LIGHTRES)
+                let lightY = ~~(texY / LIGHTRES)
+                if (!floorLightList[lightX]) floorLightList[lightX] = [];
+
+                if (!floorLightList[lightX][lightY]) {
                     floorLight = {
                         r: AMBIENTLIGHT.r,
                         g: AMBIENTLIGHT.g,
@@ -351,6 +369,9 @@ class Map {
                     if (floorLight.g > 0) floorLight.g = 0;
                     if (floorLight.b < -255) floorLight.b = -255;
                     if (floorLight.b > 0) floorLight.b = 0;
+                    floorLightList[lightX][lightY] = floorLight;
+                } else {
+                    floorLight = floorLightList[lightX][lightY];
                 }
 
 
@@ -380,7 +401,11 @@ class Map {
                 let texXToTexToCube = texX / TEXTURETOCUBE;
                 let texYToTexToCube = texY / TEXTURETOCUBE;
 
-                if (Math.abs(y % LIGHTRES) == 0) {
+                let lightX = ~~(texX / LIGHTRES)
+                let lightY = ~~(texY / LIGHTRES)
+                if (!roofLightList[lightX]) roofLightList[lightX] = [];
+
+                if (!roofLightList[lightX][lightY]) {
                     roofLight = {
                         r: AMBIENTLIGHT.r,
                         g: AMBIENTLIGHT.g,
@@ -404,6 +429,9 @@ class Map {
                     if (roofLight.g > 0) roofLight.g = 0;
                     if (roofLight.b < -255) roofLight.b = -255;
                     if (roofLight.b > 0) roofLight.b = 0;
+                    roofLightList[lightX][lightY] = roofLight;
+                } else {
+                    roofLight = roofLightList[lightX][lightY];
                 }
                 for (let drawX = 0; drawX < FLOOREDLINEWIDTH; drawX++) {
                     for (let drawY = 0; drawY < SIDERES; drawY++) {
