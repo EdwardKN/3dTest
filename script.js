@@ -1,7 +1,7 @@
 var map = undefined;
 
 //MAP
-const MAPSIZE = 16;
+const MAPSIZE = 256;
 const CUBESIZE = 32;
 const LIGHTFREQUENCY = 3
 const LIGHTPROBABILITY = 0.7;
@@ -13,8 +13,8 @@ const AMBIENTLIGHT = {
     g: -130,
     b: -130
 };
-const HEIGHTTOWIDTH = 48;
-const FOV = 60 * TORAD;
+const HEIGHTTOWIDTH = 44;
+const FOV = 70 * TORAD;
 const TEXTURESIZE = 128;
 const FLASHLIGHTSTRENGTH = 3;
 
