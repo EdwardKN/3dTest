@@ -475,8 +475,8 @@ class Player {
         this.walkingbob = 300;
 
         this.jumpPower = 0;
-        this.standardJumpPower = 500;
-        this.jumpLooseAmount = 30;
+        this.standardJumpPower = 300;
+        this.jumpLooseAmount = 20;
         this.jumping = false;
     }
     update() {
