@@ -180,7 +180,7 @@ class Map {
                     }
                     this.lights.push(new Light(x, y, LIGHTSTRENGTH, 200, 200, 175))
 
-                    this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -200, 20, 20, images.textures.chandelier))
+                    this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -300, 20, 20, images.textures.chandelier))
 
                 }
             }
@@ -515,16 +515,16 @@ class Player {
             this.moveAnim += deltaTime * this.moveFrequency * (pressedKeys['ShiftLeft'] ? 1.5 : 1);
         }
         /*if (pressedKeys['ArrowRight']) {
-            this.cameraMove(1, 0)
+            this.cameraMove(deltaTime, 0)
         }
         if (pressedKeys['ArrowLeft']) {
-            this.cameraMove(-1, 0)
+            this.cameraMove(-deltaTime, 0)
         }
         if (pressedKeys['ArrowUp']) {
-            this.cameraMove(0, -1)
+            this.cameraMove(0, -deltaTime)
         }
         if (pressedKeys['ArrowDown']) {
-            this.cameraMove(0, 1)
+            this.cameraMove(0, deltaTime)
         }*/
         if (this.jumping) {
             this.animateJump();
@@ -543,13 +543,13 @@ class Player {
         }
     }
     cameraMove(x, y) {
-        this.angle += 0.02 * x * deltaTime;
+        this.angle += 0.02 * x;
         this.angle = fixAngle(this.angle)
         this.deltaX = Math.cos(this.angle);
         this.deltaY = Math.sin(this.angle);
         this.deltaA = Math.cos(fixAngle(this.angle - Math.PI / 2));
         this.deltaB = Math.sin(fixAngle(this.angle - Math.PI / 2));
-        this.pitch -= RENDERSCALE / 4 * deltaTime * y;
+        this.pitch -= RENDERSCALE / 4 * y;
         this.pitch = this.pitch.clamp(-RENDERSCALE * 12, RENDERSCALE * 12)
     }
     draw() {
