@@ -180,7 +180,7 @@ class Map {
                     }
                     this.lights.push(new Light(x, y, LIGHTSTRENGTH, 200, 200, 175))
 
-                    this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -400, 20, 20, images.textures.chandelier))
+                    this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -200, 20, 20, images.textures.chandelier))
 
                 }
             }
