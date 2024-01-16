@@ -3,7 +3,7 @@ var map = undefined;
 //MAP
 const MAPSIZE = 256;
 const CUBESIZE = 32;
-const LIGHTFREQUENCY = 3
+const LIGHTFREQUENCY = 2;
 const LIGHTPROBABILITY = 0.7;
 const LIGHTSTRENGTH = 4;
 
@@ -20,11 +20,11 @@ const FLASHLIGHTSTRENGTH = 3;
 
 // Processing intensive
 const SPRITERENDERDISTANCE = 10;
-const LIGHTRENDERDISTANCE = 4;
+const LIGHTRENDERDISTANCE = 2;
 const MAXDOF = 50;
 const RAYAMOUNT = canvas.width;
 const SIDERES = 1;
-const LIGHTRES = 2;
+const LIGHTRES = 4;
 
 // Constants of constants
 const MAXDIST = MAXDOF * CUBESIZE;
@@ -39,7 +39,7 @@ var player = undefined;
 async function init() {
     await loadData();
     map = new Map(MAPSIZE, CUBESIZE);
-    player = new Player(100, 110, FLASHLIGHTSTRENGTH)
+    player = new Player(100, 110, FLASHLIGHTSTRENGTH);
     map.lights.push(player.flashLight);
     setTimeout(() => {
         update();
@@ -97,7 +97,7 @@ class Sprite {
 
         let vMove = (this.z * 10) / transformY;
         let spriteHeight = Math.abs((canvas.height / (transformY)));
-        let drawStartY = -spriteHeight / 2 + canvas.height / 2 + player.pitch + vMove + (player.z + Math.cos(player.moveAnim) * player.walkingbob) / distance(this.x, this.y, player.x, player.y);
+        let drawStartY = -spriteHeight / 2 + canvas.height / 2 + player.pitch + vMove + (player.z + Math.cos(player.moveAnim) * player.walkingbob * (player.crouching ? 0.3 : 1)) / distance(this.x, this.y, player.x, player.y);
 
         let spriteWidth = (canvas.height / (transformY));
         let drawStartX = -spriteWidth / 2 + spriteScreenX;
@@ -165,9 +165,9 @@ class Map {
         let tmpMap = new MazeBuilder((MAPSIZE - 1) / 2, (MAPSIZE - 1) / 2).getMaze();
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
-                this.roof.push(Object.values(images.textures)[1])
+                this.roof.push(images.textures.brick)
                 this.wall.push(tmpMap[x][y] ? new Wall(images.textures.brick) : 0)
-                this.floor.push(Object.values(images.textures)[1])
+                this.floor.push(images.textures.brick)
                 if (tmpMap[x][y] == 0 && Math.random() > LIGHTPROBABILITY) {
                     let tmp = false;
                     this.lights.forEach(light => {
@@ -178,7 +178,7 @@ class Map {
                     if (tmp) {
                         continue;
                     }
-                    this.lights.push(new Light(x, y, LIGHTSTRENGTH, 200, 200, 175))
+                    this.lights.push(new Light(x, y, LIGHTSTRENGTH, 150, 150, 125))
 
                     this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -300, 20, 20, images.textures.chandelier))
 
@@ -300,10 +300,14 @@ class Map {
 
 
             FILTEREDLIGHTS.forEach(lightSource => {
-                let lighting = lightSource.rayTrace(ray.x, ray.y, 1);
+                let lighting = lightSource.rayTrace(ray.x, ray.y, 0.001);
                 wallLight.r += lighting.r;
                 wallLight.g += lighting.g;
                 wallLight.b += lighting.b;
+
+                if (wallLight.r < -lightSource.r) wallLight.r = -lightSource.r;
+                if (wallLight.g < -lightSource.g) wallLight.g = -lightSource.g;
+                if (wallLight.b < -lightSource.b) wallLight.b = -lightSource.b;
             })
 
             if (wallLight.r < -255) wallLight.r = -255;
@@ -357,11 +361,14 @@ class Map {
                         if (minDist > lightSource.strength * CUBESIZE) {
                             return;
                         }
-                        let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1);
+                        let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 2);
                         if (!lighting) return;
                         floorLight.r += lighting.r;
                         floorLight.g += lighting.g;
                         floorLight.b += lighting.b;
+                        if (floorLight.r < -lightSource.r) floorLight.r = -lightSource.r;
+                        if (floorLight.g < -lightSource.g) floorLight.g = -lightSource.g;
+                        if (floorLight.b < -lightSource.b) floorLight.b = -lightSource.b;
                     })
                     if (floorLight.r < -255) floorLight.r = -255;
                     if (floorLight.r > 0) floorLight.r = 0;
@@ -417,11 +424,14 @@ class Map {
                         if (minDist > lightSource.strength * CUBESIZE) {
                             return;
                         }
-                        let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 1);
+                        let lighting = lightSource.rayTrace(texXToTexToCube, texYToTexToCube, 2);
                         if (!lighting) return;
                         roofLight.r += lighting.r;
                         roofLight.g += lighting.g;
                         roofLight.b += lighting.b;
+                        if (roofLight.r < -lightSource.r) roofLight.r = -lightSource.r;
+                        if (roofLight.g < -lightSource.g) roofLight.g = -lightSource.g;
+                        if (roofLight.b < -lightSource.b) roofLight.b = -lightSource.b;
                     })
                     if (roofLight.r < -255) roofLight.r = -255;
                     if (roofLight.r > 0) roofLight.r = 0;
@@ -475,9 +485,12 @@ class Player {
         this.walkingbob = 300;
 
         this.jumpPower = 0;
-        this.standardJumpPower = 300;
-        this.jumpLooseAmount = 20;
+        this.standardJumpPower = 200;
+        this.jumpLooseAmount = 15;
         this.jumping = false;
+
+        this.crouching = false;
+        this.crouchAnimSpeed = 50;
     }
     update() {
 
@@ -505,10 +518,21 @@ class Player {
                 this.y += this.deltaB * deltaTime;
             }
         }
-        if (pressedKeys['Space'] && !this.jumping) {
+        if (pressedKeys['Space'] && !this.jumping && !this.crouching) {
             this.jumping = true;
             this.jumpPower = this.standardJumpPower;
             this.moveAnim = 0;
+        }
+        this.crouching = pressedKeys['ControlLeft']
+
+        if (this.crouching) {
+            if (this.z > -500) {
+                this.z -= deltaTime * this.crouchAnimSpeed;
+            }
+        } else {
+            if (this.z < 0) {
+                this.z += deltaTime * this.crouchAnimSpeed;
+            }
         }
 
         if (!this.jumping && (pressedKeys['KeyW'] || pressedKeys['KeyS'] || pressedKeys['KeyA'] || pressedKeys['KeyD'])) {
@@ -617,7 +641,7 @@ function getHorizontalRay(from, angle, maxdof = MAXDOF, ignoreTex = false) {
             dof++;
         };
     }
-    return { x: rayX, y: rayY, side: 0, tex: ignoreTex ? undefined : map.wall[mapIndex]?.img || Object.values(images.textures)[1], dof: dof, maxed: maxed }
+    return { x: rayX, y: rayY, side: 0, tex: ignoreTex ? undefined : map.wall[mapIndex]?.img || images.textures.brick, dof: dof, maxed: maxed }
 
 }
 
@@ -665,7 +689,7 @@ function getVerticalRay(from, angle, maxdof = MAXDOF, ignoreTex = false) {
             dof++;
         };
     }
-    return { x: rayX, y: rayY, side: 1, tex: ignoreTex ? undefined : map.wall[mapIndex]?.img || Object.values(images.textures)[1], dof: dof, maxed: maxed }
+    return { x: rayX, y: rayY, side: 1, tex: ignoreTex ? undefined : map.wall[mapIndex]?.img || images.textures.brick, dof: dof, maxed: maxed }
 
 }
 
