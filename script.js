@@ -5,7 +5,7 @@ const MAPSIZE = 256;
 const CUBESIZE = 32;
 const LIGHTFREQUENCY = 2;
 const LIGHTPROBABILITY = 0.7;
-const LIGHTSTRENGTH = 4;
+const LIGHTSTRENGTH = 5;
 
 //VISUAL
 const AMBIENTLIGHT = {
@@ -16,7 +16,7 @@ const AMBIENTLIGHT = {
 const HEIGHTTOWIDTH = 44;
 const FOV = 70 * TORAD;
 const TEXTURESIZE = 128;
-const FLASHLIGHTSTRENGTH = 3;
+const FLASHLIGHTSTRENGTH = 0;
 
 // Processing intensive
 const SPRITERENDERDISTANCE = 10;
@@ -178,7 +178,7 @@ class Map {
                     if (tmp) {
                         continue;
                     }
-                    this.lights.push(new Light(x, y, LIGHTSTRENGTH, 150, 150, 125))
+                    this.lights.push(new Light(x, y, LIGHTSTRENGTH, 90, 90, 75))
 
                     this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -300, 20, 20, images.textures.chandelier))
 
@@ -298,24 +298,25 @@ class Map {
                 b: AMBIENTLIGHT.b
             };
 
-
+            let highestR = 0;
+            let highestG = 0;
+            let highestB = 0;
             FILTEREDLIGHTS.forEach(lightSource => {
                 let lighting = lightSource.rayTrace(ray.x, ray.y, 0.001);
                 wallLight.r += lighting.r;
                 wallLight.g += lighting.g;
                 wallLight.b += lighting.b;
 
-                if (wallLight.r < -lightSource.r) wallLight.r = -lightSource.r;
-                if (wallLight.g < -lightSource.g) wallLight.g = -lightSource.g;
-                if (wallLight.b < -lightSource.b) wallLight.b = -lightSource.b;
+                if (highestR < lightSource.r) { highestR = lightSource.r }
+                if (highestG < lightSource.g) { highestG = lightSource.g }
+                if (highestB < lightSource.b) { highestB = lightSource.b }
             })
-
             if (wallLight.r < -255) wallLight.r = -255;
-            if (wallLight.r > 0) wallLight.r = 0;
+            if (wallLight.r > AMBIENTLIGHT.r + highestR) wallLight.r = AMBIENTLIGHT.r + highestR;
             if (wallLight.g < -255) wallLight.g = -255;
-            if (wallLight.g > 0) wallLight.g = 0;
+            if (wallLight.g > AMBIENTLIGHT.g + highestG) wallLight.g = AMBIENTLIGHT.g + highestG;
             if (wallLight.b < -255) wallLight.b = -255;
-            if (wallLight.b > 0) wallLight.b = 0;
+            if (wallLight.b > AMBIENTLIGHT.b + highestB) wallLight.b = AMBIENTLIGHT.b + highestB;
 
             for (let y = 0; y < TEXTURESIZE; y++) {
                 let colStart = getWholeImageDataFromSpriteSheet(ray.tex, texX, y);
@@ -328,7 +329,7 @@ class Map {
                     }
                 }
             }
-            const FLOORROOFMULTIPLIER = (256 / 58 * RENDERSCALE) * HEIGHTTOWIDTH * TEXTURETOCUBE / raFix;
+            const FLOORROOFMULTIPLIER = (256 / 59 * RENDERSCALE) * HEIGHTTOWIDTH * TEXTURETOCUBE / raFix;
             let upper = ~~(lineOffset + lineHeight + PITCH) + ~~(POSZ / ray.distance)
             for (let y = upper; y < DRAWHEIGHT; y += SIDERES) {
                 let dy = y - DRAWHEIGHT / 2 - PITCH
@@ -355,7 +356,9 @@ class Map {
                         g: AMBIENTLIGHT.g,
                         b: AMBIENTLIGHT.b
                     };
-
+                    let highestR = 0;
+                    let highestG = 0;
+                    let highestB = 0;
                     FILTEREDLIGHTS.forEach(lightSource => {
                         let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
                         if (minDist > lightSource.strength * CUBESIZE) {
@@ -366,16 +369,16 @@ class Map {
                         floorLight.r += lighting.r;
                         floorLight.g += lighting.g;
                         floorLight.b += lighting.b;
-                        if (floorLight.r < -lightSource.r) floorLight.r = -lightSource.r;
-                        if (floorLight.g < -lightSource.g) floorLight.g = -lightSource.g;
-                        if (floorLight.b < -lightSource.b) floorLight.b = -lightSource.b;
+                        if (highestR < lightSource.r) { highestR = lightSource.r }
+                        if (highestG < lightSource.g) { highestG = lightSource.g }
+                        if (highestB < lightSource.b) { highestB = lightSource.b }
                     })
                     if (floorLight.r < -255) floorLight.r = -255;
-                    if (floorLight.r > 0) floorLight.r = 0;
+                    if (floorLight.r > AMBIENTLIGHT.r + highestR) floorLight.r = AMBIENTLIGHT.r + highestR;
                     if (floorLight.g < -255) floorLight.g = -255;
-                    if (floorLight.g > 0) floorLight.g = 0;
+                    if (floorLight.g > AMBIENTLIGHT.g + highestG) floorLight.g = AMBIENTLIGHT.g + highestG;
                     if (floorLight.b < -255) floorLight.b = -255;
-                    if (floorLight.b > 0) floorLight.b = 0;
+                    if (floorLight.b > AMBIENTLIGHT.b + highestB) floorLight.b = AMBIENTLIGHT.b + highestB;
                     floorLightList[lightX][lightY] = floorLight;
                 } else {
                     floorLight = floorLightList[lightX][lightY];
@@ -418,7 +421,9 @@ class Map {
                         g: AMBIENTLIGHT.g,
                         b: AMBIENTLIGHT.b
                     };
-
+                    let highestR = 0;
+                    let highestG = 0;
+                    let highestB = 0;
                     FILTEREDLIGHTS.forEach(lightSource => {
                         let minDist = distance(texXToTexToCube, texYToTexToCube, lightSource.x * CUBESIZE + CUBESIZE / 2, lightSource.y * CUBESIZE + CUBESIZE / 2);
                         if (minDist > lightSource.strength * CUBESIZE) {
@@ -429,16 +434,16 @@ class Map {
                         roofLight.r += lighting.r;
                         roofLight.g += lighting.g;
                         roofLight.b += lighting.b;
-                        if (roofLight.r < -lightSource.r) roofLight.r = -lightSource.r;
-                        if (roofLight.g < -lightSource.g) roofLight.g = -lightSource.g;
-                        if (roofLight.b < -lightSource.b) roofLight.b = -lightSource.b;
+                        if (highestR < lightSource.r) { highestR = lightSource.r }
+                        if (highestG < lightSource.g) { highestG = lightSource.g }
+                        if (highestB < lightSource.b) { highestB = lightSource.b }
                     })
                     if (roofLight.r < -255) roofLight.r = -255;
-                    if (roofLight.r > 0) roofLight.r = 0;
+                    if (roofLight.r > AMBIENTLIGHT.r + highestR) roofLight.r = AMBIENTLIGHT.r + highestR;
                     if (roofLight.g < -255) roofLight.g = -255;
-                    if (roofLight.g > 0) roofLight.g = 0;
+                    if (roofLight.g > AMBIENTLIGHT.g + highestG) roofLight.g = AMBIENTLIGHT.g + highestG;
                     if (roofLight.b < -255) roofLight.b = -255;
-                    if (roofLight.b > 0) roofLight.b = 0;
+                    if (roofLight.b > AMBIENTLIGHT.b + highestB) roofLight.b = AMBIENTLIGHT.b + highestB;
                     roofLightList[lightX][lightY] = roofLight;
                 } else {
                     roofLight = roofLightList[lightX][lightY];
@@ -478,7 +483,7 @@ class Player {
         this.deltaA = 0;
         this.deltaB = -1;
         this.pitch = 0;
-        this.flashLight = new Light(this.x, this.y, lightStrength, 100, 100, 85);
+        this.flashLight = new Light(this.x, this.y, lightStrength, 100, 100, 90);
 
         this.moveAnim = 0;
         this.moveFrequency = 0.2;
@@ -526,7 +531,7 @@ class Player {
         this.crouching = pressedKeys['ControlLeft']
 
         if (this.crouching) {
-            if (this.z > -500) {
+            if (this.z > -1000) {
                 this.z -= deltaTime * this.crouchAnimSpeed;
             }
         } else {
