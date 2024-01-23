@@ -5,7 +5,8 @@ const MAPSIZE = 256;
 const CUBESIZE = 32;
 const LIGHTFREQUENCY = 2;
 const LIGHTPROBABILITY = 0.7;
-const LIGHTSTRENGTH = 5;
+const LIGHTSTRENGTH = 4;
+const LIGHTDISTANCE = 4;
 
 //VISUAL
 const AMBIENTLIGHT = {
@@ -16,7 +17,7 @@ const AMBIENTLIGHT = {
 const HEIGHTTOWIDTH = 44;
 const FOV = 70 * TORAD;
 const TEXTURESIZE = 128;
-const FLASHLIGHTSTRENGTH = 0;
+const FLASHLIGHTSTRENGTH = 2;
 
 // Processing intensive
 const SPRITERENDERDISTANCE = 10;
@@ -111,10 +112,11 @@ class Sprite {
     }
 }
 class Light {
-    constructor(x, y, strength, r = 255, g = 255, b = 255) {
+    constructor(x, y, strength, maxDistance, r = 255, g = 255, b = 255) {
         this.x = x;
         this.y = y;
         this.strength = strength;
+        this.maxDistance = maxDistance;
         this.r = r;
         this.g = g;
         this.b = b;
@@ -127,7 +129,7 @@ class Light {
         }
         let minDist = distance(x, y, this.x * CUBESIZE + CUBESIZE / 2 * specialCase, this.y * CUBESIZE + CUBESIZE / 2 * specialCase);
 
-        if (minDist > this.strength * CUBESIZE) {
+        if (minDist > this.maxDistance * CUBESIZE) {
             return {
                 r: 0,
                 g: 0,
@@ -136,7 +138,7 @@ class Light {
         }
 
         let degree = fixAngle(angleFromPoints(x, y, this.x * CUBESIZE + CUBESIZE / 2 * specialCase, this.y * CUBESIZE + CUBESIZE / 2 * specialCase) + 0.0001);
-        let ray = getRay({ x: x - Math.cos(degree) * offset, y: y - Math.sin(degree) * offset }, degree, this.strength, true)
+        let ray = getRay({ x: x - Math.cos(degree) * offset, y: y - Math.sin(degree) * offset }, degree, this.maxDistance, true)
 
         let multiplier = ray.distance < minDist ? 0 : Math.max(0, this.strength * CUBESIZE - Math.min(ray.distance, minDist))
 
@@ -178,7 +180,7 @@ class Map {
                     if (tmp) {
                         continue;
                     }
-                    this.lights.push(new Light(x, y, LIGHTSTRENGTH, 90, 90, 75))
+                    this.lights.push(new Light(x, y, LIGHTSTRENGTH, LIGHTDISTANCE, 100, 100, 85))
 
                     this.sprites.push(new Sprite(x * CUBESIZE + CUBESIZE / 2, y * CUBESIZE + CUBESIZE / 2, -300, 20, 20, images.textures.chandelier))
 
@@ -202,7 +204,7 @@ class Map {
     }
     drawMapEditor() {
         c.fillStyle = "red"
-        c.fillRect(0, 0, MAPSIZE * CUBESIZE * EDITORSCALE, MAPSIZE * CUBESIZE * EDITORSCALE)
+        //c.fillRect(0, 0, MAPSIZE * CUBESIZE * EDITORSCALE, MAPSIZE * CUBESIZE * EDITORSCALE)
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
                 c.fillStyle = this.wall[x + y * MAPSIZE] instanceof Wall ? "black" : "white";
@@ -213,7 +215,7 @@ class Map {
                         this.wall[x + y * MAPSIZE] = this.wall[x + y * MAPSIZE] instanceof Wall ? 0 : new Wall(images.textures.brick, 16, 1);
                     }
                 }
-                c.fillRect(x * CUBESIZE * EDITORSCALE + 1, y * CUBESIZE * EDITORSCALE + 1, CUBESIZE * EDITORSCALE - 2, CUBESIZE * EDITORSCALE - 2)
+                c.fillRect(x * CUBESIZE * EDITORSCALE, y * CUBESIZE * EDITORSCALE, CUBESIZE * EDITORSCALE, CUBESIZE * EDITORSCALE)
             }
         }
     }
@@ -244,7 +246,7 @@ class Map {
         const DRAWHEIGHT = canvas.height;
         const DRAWWIDTH = canvas.width;
         const PITCH = ~~(player.pitch);
-        const POSZ = ~~(player.z + Math.cos(player.moveAnim) * player.walkingbob);
+        const POSZ = ~~(player.z + Math.cos(player.moveAnim) * player.walkingbob * (player.crouching ? 0.3 : 1));
 
         const FILTEREDLIGHTS = this.lights.filter(e => distance(player.x, player.y, e.x * CUBESIZE, e.y * CUBESIZE) < e.strength * CUBESIZE * LIGHTRENDERDISTANCE);
         let floorLight = {
@@ -483,7 +485,7 @@ class Player {
         this.deltaA = 0;
         this.deltaB = -1;
         this.pitch = 0;
-        this.flashLight = new Light(this.x, this.y, lightStrength, 100, 100, 90);
+        this.flashLight = new Light(this.x, this.y, lightStrength, lightStrength, 100, 100, 90);
 
         this.moveAnim = 0;
         this.moveFrequency = 0.2;
@@ -495,7 +497,7 @@ class Player {
         this.jumping = false;
 
         this.crouching = false;
-        this.crouchAnimSpeed = 50;
+        this.crouchAnimSpeed = 100;
     }
     update() {
 
