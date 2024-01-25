@@ -164,7 +164,7 @@ class Map {
         this.init()
     }
     init() {
-        let tmpMap = new MazeBuilder((MAPSIZE - 1) / 2, (MAPSIZE - 1) / 2).getMaze();
+        let tmpMap = new MazeBuilder(MAPSIZE, MAPSIZE).getMaze();
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
                 this.roof.push(images.textures.brick)

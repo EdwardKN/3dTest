@@ -3,13 +3,13 @@ class MazeBuilder {
     // Original JavaScript code by Chirp Internet: www.chirpinternet.eu
     // Please acknowledge use of this code by including this header.
 
-    constructor(width, height) {
+    constructor(cols, rows) {
 
-        this.width = width;
-        this.height = height;
+        this.width = (cols - 1) / 2;
+        this.height = (rows - 1) / 2;
 
-        this.cols = 2 * this.width + 1;
-        this.rows = 2 * this.height + 1;
+        this.cols = cols;
+        this.rows = rows;
 
         this.maze = this.initArray([]);
 
