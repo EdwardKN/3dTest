@@ -3,10 +3,10 @@ var map = undefined;
 //MAP
 const MAPSIZE = 256;
 const CUBESIZE = 32;
-const LIGHTFREQUENCY = 2;
+const LIGHTFREQUENCY = 3;
 const LIGHTPROBABILITY = 0.7;
-const LIGHTSTRENGTH = 4;
-const LIGHTDISTANCE = 4;
+const LIGHTSTRENGTH = 5;
+const LIGHTDISTANCE = 5;
 
 //VISUAL
 const AMBIENTLIGHT = {
@@ -164,7 +164,39 @@ class Map {
         this.init()
     }
     init() {
-        let tmpMap = new MazeBuilder(MAPSIZE, MAPSIZE).getMaze();
+        generateRooms();
+        calculateNeighbours();
+        selectStartingRoom();
+        generatePaths();
+        let tmpMap = [];
+        for (let x = 0; x < MAPSIZE; x++) {
+            let tmp2 = [];
+            for (let y = 0; y < MAPSIZE; y++) {
+                tmp2[y] = 1
+                rooms.forEach(xRooms => {
+                    xRooms.forEach(room => {
+                        if (detectCollision(x, y, 1, 1, room.position.x, room.position.y, room.size.x, room.size.y)) {
+                            tmp2[y] = 0;
+                        }
+                    })
+                })
+
+            }
+            tmpMap.push(tmp2);
+        }
+        for (let x = 0; x < MAPSIZE; x++) {
+            for (let y = 0; y < MAPSIZE; y++) {
+                paths.forEach(path => {
+                    if (detectCollision(x, y, 1, 1, path.start.x, path.start.y, path.end.x - path.start.x, 1)) {
+                        tmpMap[x][y] = 0;
+                    }
+                    if (detectCollision(x, y, 1, 1, path.start.x, path.start.y, 1, path.end.y - path.start.y)) {
+                        tmpMap[x][y] = 0;
+                    }
+                })
+            }
+        }
+
         for (let x = 0; x < MAPSIZE; x++) {
             for (let y = 0; y < MAPSIZE; y++) {
                 this.roof.push(images.textures.brick)
